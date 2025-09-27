@@ -1,18 +1,20 @@
 import { Sequelize } from "sequelize";
-
+import path from "path";
+import dotenv from "dotenv"; //cargar variables de entorno
+dotenv.config({ path: path.resolve("../.env") });
 
 //para bd local
 //aca el 3er parametro es la contraseña, si la tienen vacia la dejan con ""
-const db= new Sequelize("SisHubLocal", "root", "root", {
-    host: "localhost",
-    port: 3307, //cambienlo al que tengan ustedes
-    dialect: "mysql"
-});
+// const db= new Sequelize("SisHubLocal", "root", "root", {
+//     host: "localhost",
+//     port: 3307, //cambienlo al que tengan ustedes
+//     dialect: "mysql"
+// });
 
 //Para bd desplegada
-// const db = new Sequelize(process.env.MYSQL_URL, {
-//   define: { timestamps: false },
-// });
+const db = new Sequelize(process.env.MYSQL_URL, {
+   define: { timestamps: false },
+});
 
 
 // Función para probar la conexión con la db
