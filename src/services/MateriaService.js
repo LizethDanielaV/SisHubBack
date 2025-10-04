@@ -38,4 +38,14 @@ async function actualizar(idMateria, nuevosDatos) {
   
     return materiaExistente; 
   }
-export default {crear, actualizar};
+
+ async function listar() {
+  try {
+    const materias = await Materia.findAll();
+    return materias;
+  } catch (error) {
+    throw new Error("Error al obtener las materias " + error.message);
+  }
+}
+
+export default {crear, actualizar, listar};
