@@ -32,4 +32,14 @@ export async function actualizar(req, res) {
   }
 }
 
-export default {crear, actualizar};
+export async function listar(req, res) {
+  try {
+    const materias = await MateriaService.listar();
+    res.json(materias);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+export default {crear, actualizar, listar};
