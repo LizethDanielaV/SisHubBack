@@ -17,4 +17,19 @@ async function crear(req, res) {
     }
 };
 
-export default {crear};
+export async function actualizar(req, res) {
+  try {
+    const { id_materia } = req.params;
+    const nuevosDatos = req.body;
+
+    const materiaActualizada = await MateriaService.actualizar(id_materia, nuevosDatos);
+
+    res.status(200).json(materiaActualizada);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+            message: error.message || "Error al actualizar la materia",
+          });
+  }
+}
+
+export default {crear, actualizar};

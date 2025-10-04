@@ -26,4 +26,16 @@ async function crear(codigo, nombre, creditos, prerrequisitos, tipo, idArea) {
   }
 }
 
-export default {crear};
+
+async function actualizar(idMateria, nuevosDatos) {
+    const materiaExistente = await Materia.findByPk(idMateria);
+  
+    if (!materiaExistente) {
+      throw new Error("Materia no encontrada");
+    }
+  
+    await materiaExistente.update(nuevosDatos);
+  
+    return materiaExistente; 
+  }
+export default {crear, actualizar};
