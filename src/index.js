@@ -8,6 +8,7 @@ import db, { testConnection } from "./db/db.js";
 // Importar rutas
 import usuarioRoutes from "./routes/usuarios.js";
 import areaRoutes from "./routes/areas.js";
+import materiasRoutes from "./routes/materias.js"
 
 dotenv.config({ path: path.resolve("../.env") });
 
@@ -29,6 +30,7 @@ testConnection();
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
+app.use("/api/materias", materiasRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
