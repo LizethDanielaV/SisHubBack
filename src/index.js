@@ -16,6 +16,7 @@ import dotenv from "dotenv"; //cargar variables de entorno
 dotenv.config({ path: path.resolve("../.env") });//le digo en donde esta especificamente el .env
 
 
+
 const app = express();
 app.use(express.json());
 
