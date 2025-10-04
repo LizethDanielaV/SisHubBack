@@ -1,7 +1,17 @@
 import { Sequelize } from "sequelize";
-import path from "path";
-import dotenv from "dotenv"; //cargar variables de entorno
-dotenv.config({ path: path.resolve("../.env") });
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+import dotenv from "dotenv";
+
+// Obtener __dirname en módulos ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Cargar variables de entorno desde la raíz del proyecto
+dotenv.config({ path: resolve(__dirname, "../../.env") });
+
+// Verificar que la URL se cargó correctamente
+console.log("MYSQL_URL cargada:", process.env.MYSQL_URL ? "✓" : "✗ (undefined)");
 
 //para bd local
 //aca el 3er parametro es la contraseña, si la tienen vacia la dejan con ""

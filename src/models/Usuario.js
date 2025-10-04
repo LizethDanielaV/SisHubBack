@@ -9,7 +9,8 @@ const Usuario  = db.define("Usuario", {
     documento: {type: DataTypes.STRING(20), unique: true, allowNull: false},
     correo: {type: DataTypes.STRING(100), unique: true, allowNull: false}, 
     telefono: {type: DataTypes.STRING(20)},
-    contrasena: {type: DataTypes.STRING(255), allowNull: false}
+    contrasena: { type: DataTypes.STRING(255), allowNull: true },
+    uid_firebase: { type: DataTypes.STRING(128), unique: true, allowNull: true }
 },{
     timestamps: false,
     freezeTableName: true
