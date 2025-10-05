@@ -48,4 +48,20 @@ async function actualizar(idMateria, nuevosDatos) {
   }
 }
 
-export default {crear, actualizar, listar};
+ async function buscarPorId(idMateria) {
+  if (!idMateria || isNaN(idMateria)) {
+    throw new Error("El id no es válido");
+  }
+  try {
+    const materiaBuscada = await Materia.findByPk(idMateria);
+
+    if (!materiaBuscada) {
+      throw new Error("Materia no encontrada");
+    }
+    return materiaBuscada;
+  } catch (error) {
+    throw new Error("Error al obtener la materia " + error.message);
+    }
+ }
+
+export default {crear, actualizar, listar, buscarPorId};
