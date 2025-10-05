@@ -17,7 +17,7 @@ async function crear(req, res) {
     }
 };
 
-export async function actualizar(req, res) {
+async function actualizar(req, res) {
   try {
     const { id_materia } = req.params;
     const nuevosDatos = req.body;
@@ -32,7 +32,7 @@ export async function actualizar(req, res) {
   }
 }
 
-export async function listar(req, res) {
+ async function listar(req, res) {
   try {
     const materias = await MateriaService.listar();
     res.json(materias);
@@ -42,4 +42,15 @@ export async function listar(req, res) {
       .json({ message: "Error al obtener materias", error: error.message });
   }
 }
-export default {crear, actualizar, listar};
+
+export async function buscarPorId(req, res) {
+  try {
+    const materia = await MateriaService.buscarPorId(req.params.id_materia);
+    res.status(200).json(materia);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener la materia", error: error.message });
+  }
+}
+export default {crear, actualizar, listar, buscarPorId};
