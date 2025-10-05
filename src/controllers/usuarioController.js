@@ -2,6 +2,7 @@ import Rol from "../models/Rol.js";
 import Usuario from "../models/Usuario.js";
 import admin from "../firebaseAdmin.js";
 import Estado from "../models/Estado.js";
+import UsuarioService from "../services/UsuarioService.js";
 
 export const registrarUsuario = async (req, res) => {
   try {
@@ -15,13 +16,13 @@ export const registrarUsuario = async (req, res) => {
 
     let estadoInicial;
     if (rolDb.descripcion === "DOCENTE") {
-      const estadoStandBy = await Estado.findOne({ 
-        where: { descripcion: "STAND_BY" } 
+      const estadoStandBy = await Estado.findOne({
+        where: { descripcion: "STAND_BY" }
       });
       estadoInicial = estadoStandBy ? estadoStandBy.id_estado : 1;
     } else {
-      const estadoHabilitado = await Estado.findOne({ 
-        where: { descripcion: "HABILITADO" } 
+      const estadoHabilitado = await Estado.findOne({
+        where: { descripcion: "HABILITADO" }
       });
       estadoInicial = estadoHabilitado ? estadoHabilitado.id_estado : 1;
     }
@@ -49,10 +50,10 @@ export const registrarUsuario = async (req, res) => {
 
     const estadoActual = await Estado.findByPk(estadoInicial);
 
-    await admin.auth().setCustomUserClaims(uid, { 
-      role: rolDb.descripcion, 
+    await admin.auth().setCustomUserClaims(uid, {
+      role: rolDb.descripcion,
       id_rol: rolDb.id_rol,
-      estado: estadoActual?.descripcion || "HABILITADO" 
+      estado: estadoActual?.descripcion || "HABILITADO"
     });
 
     await usuario.reload({
@@ -62,10 +63,10 @@ export const registrarUsuario = async (req, res) => {
       ]
     });
 
-    return res.json({ 
-      ok: true, 
+    return res.json({
+      ok: true,
       usuario,
-      mensaje: rolDb.descripcion === "DOCENTE" 
+      mensaje: rolDb.descripcion === "DOCENTE"
         ? "Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador."
         : "Registro exitoso. Tu cuenta ha sido habilitada."
     });
@@ -102,15 +103,15 @@ export const obtenerTodosLosUsuarios = async (req, res) => {
   try {
     const usuarios = await Usuario.findAll({
       include: [
-        { 
-          model: Rol, 
+        {
+          model: Rol,
           attributes: ["id_rol", "descripcion"],
           where: {
             descripcion: ["DOCENTE", "ESTUDIANTE"]
           }
         },
-        { 
-          model: Estado, 
+        {
+          model: Estado,
           attributes: ["id_estado", "descripcion"],
           where: {
             descripcion: ["HABILITADO", "INHABILITADO"]
@@ -125,13 +126,13 @@ export const obtenerTodosLosUsuarios = async (req, res) => {
         "telefono",
         "uid_firebase"
       ],
-      order: [["id_usuario", "DESC"]] 
+      order: [["id_usuario", "DESC"]]
     });
 
-    return res.json({ 
-      ok: true, 
+    return res.json({
+      ok: true,
       total: usuarios.length,
-      usuarios 
+      usuarios
     });
   } catch (err) {
     console.error("Error al obtener usuarios:", err);
@@ -143,12 +144,12 @@ export const obtenerUsuariosStandBy = async (req, res) => {
   try {
     const usuariosStandBy = await Usuario.findAll({
       include: [
-        { 
-          model: Rol, 
+        {
+          model: Rol,
           attributes: ["id_rol", "descripcion"]
         },
-        { 
-          model: Estado, 
+        {
+          model: Estado,
           attributes: ["id_estado", "descripcion"],
           where: {
             descripcion: "STAND_BY"
@@ -166,10 +167,10 @@ export const obtenerUsuariosStandBy = async (req, res) => {
       order: [["id_usuario", "DESC"]]
     });
 
-    return res.json({ 
-      ok: true, 
+    return res.json({
+      ok: true,
       total: usuariosStandBy.length,
-      usuarios: usuariosStandBy 
+      usuarios: usuariosStandBy
     });
   } catch (err) {
     console.error("Error al obtener usuarios en STAND_BY:", err);
@@ -218,10 +219,10 @@ export const cambiarEstadoUsuario = async (req, res) => {
       ]
     });
 
-    return res.json({ 
-      ok: true, 
+    return res.json({
+      ok: true,
       mensaje: `Usuario ${habilitar ? "habilitado" : "inhabilitado"} correctamente`,
-      usuario 
+      usuario
     });
   } catch (err) {
     console.error("Error al cambiar estado del usuario:", err);
@@ -245,21 +246,21 @@ export const aprobarPostulacion = async (req, res) => {
     }
 
     if (usuario.Estado.descripcion !== "STAND_BY") {
-      return res.status(400).json({ 
-        error: "El usuario no está en estado de espera" 
+      return res.status(400).json({
+        error: "El usuario no está en estado de espera"
       });
     }
 
-    const rolDocente = await Rol.findOne({ 
-      where: { descripcion: "DOCENTE" } 
+    const rolDocente = await Rol.findOne({
+      where: { descripcion: "DOCENTE" }
     });
 
     if (!rolDocente) {
       return res.status(400).json({ error: "Rol DOCENTE no encontrado" });
     }
 
-    const estadoHabilitado = await Estado.findOne({ 
-      where: { descripcion: "HABILITADO" } 
+    const estadoHabilitado = await Estado.findOne({
+      where: { descripcion: "HABILITADO" }
     });
 
     if (!estadoHabilitado) {
@@ -286,10 +287,10 @@ export const aprobarPostulacion = async (req, res) => {
       ]
     });
 
-    return res.json({ 
-      ok: true, 
+    return res.json({
+      ok: true,
       mensaje: "Postulación aprobada correctamente. Usuario ahora es DOCENTE",
-      usuario 
+      usuario
     });
   } catch (err) {
     console.error("Error al aprobar postulación:", err);
@@ -312,18 +313,18 @@ export const rechazarPostulacion = async (req, res) => {
     }
 
     if (usuario.Estado.descripcion !== "STAND_BY") {
-      return res.status(400).json({ 
-        error: "El usuario no está en estado de espera" 
+      return res.status(400).json({
+        error: "El usuario no está en estado de espera"
       });
     }
 
-    const estadoRechazado = await Estado.findOne({ 
-      where: { descripcion: "RECHAZADO" } 
+    const estadoRechazado = await Estado.findOne({
+      where: { descripcion: "RECHAZADO" }
     });
 
     if (estadoRechazado) {
       await usuario.update({ id_estado: estadoRechazado.id_estado });
-      
+
       if (usuario.uid_firebase) {
         await admin.auth().setCustomUserClaims(usuario.uid_firebase, {
           role: usuario.Rol?.descripcion,
@@ -332,21 +333,32 @@ export const rechazarPostulacion = async (req, res) => {
         });
       }
 
-      return res.json({ 
-        ok: true, 
+      return res.json({
+        ok: true,
         mensaje: "Postulación rechazada correctamente",
-        usuario 
+        usuario
       });
     } else {
       await usuario.destroy();
-      
-      return res.json({ 
-        ok: true, 
+
+      return res.json({
+        ok: true,
         mensaje: "Postulación rechazada. Usuario eliminado del sistema"
       });
     }
   } catch (err) {
     console.error("Error al rechazar postulación:", err);
     return res.status(500).json({ error: "Error al rechazar postulación" });
+  }
+};
+
+
+export const listarDocentes = async (req, res) => {
+  try {
+    const docentes = await UsuarioService.listarDocentes();
+    return res.json({ docentes });
+  } catch (error) {
+    console.error("Error al listar docentes:", error);
+    return res.status(500).json({ error: "Error al listar docentes" });
   }
 };

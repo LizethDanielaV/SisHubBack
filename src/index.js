@@ -9,6 +9,7 @@ import db, { testConnection } from "./db/db.js";
 import usuarioRoutes from "./routes/usuarios.js";
 import areaRoutes from "./routes/areas.js";
 import materiasRoutes from "./routes/materias.js"
+import grupoRoutes from "./routes/grupos.js";
 
 dotenv.config({ path: path.resolve("../.env") });
 
@@ -31,6 +32,8 @@ testConnection();
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/materias", materiasRoutes);
+app.use("/api/grupos", grupoRoutes);
+
 
 // Ruta base
 app.get("/", (req, res) => {

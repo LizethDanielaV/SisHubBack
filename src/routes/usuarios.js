@@ -8,7 +8,7 @@ import {
     aprobarPostulacion,
     rechazarPostulacion
 } from "../controllers/usuarioController.js";
-import { registrarUsuario, obtenerUsuarioPorUid } from "../controllers/usuarioController.js";
+import { registrarUsuario, obtenerUsuarioPorUid, listarDocentes } from "../controllers/usuarioController.js";
 
 const router = express.Router();
 
@@ -20,5 +20,6 @@ router.get("/stand-by", verificarToken, verificarRol([1]), obtenerUsuariosStandB
 router.patch("/:id_usuario/estado", verificarToken, verificarRol([1]), cambiarEstadoUsuario);
 router.patch("/:id_usuario/aprobar", verificarToken, verificarRol([1]), aprobarPostulacion);
 router.patch("/:id_usuario/rechazar", verificarToken, verificarRol([1]), rechazarPostulacion);
+router.get("/docentes", listarDocentes);
 
 export default router;
