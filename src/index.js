@@ -10,6 +10,7 @@ import usuarioRoutes from "./routes/usuarios.js";
 import areaRoutes from "./routes/areas.js";
 import materiasRoutes from "./routes/materias.js"
 import grupoRoutes from "./routes/grupos.js";
+import gruposUsuariosRoutes from "./routes/gruposUsuarios.js";
 
 dotenv.config(); 
 
@@ -48,6 +49,7 @@ app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/materias", materiasRoutes);
 app.use("/api/grupos", grupoRoutes);
+app.use("/api/grupos-usuarios", gruposUsuariosRoutes);
 
 
 // Ruta base
