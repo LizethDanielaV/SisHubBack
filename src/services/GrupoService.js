@@ -33,7 +33,7 @@ async function crearGrupo(nombre, clave_acceso, semestre, id_materia, id_docente
 
 }
 
-async function deshabilitarGrupo(id_grupo) {
+async function actualizarEstado(id_grupo, nuevoEstado) {
     if (!id_grupo) {
         throw new Error("ID de grupo es requerido");
     }
@@ -42,7 +42,7 @@ async function deshabilitarGrupo(id_grupo) {
         if (!grupo) {
             throw new Error("Grupo no encontrado");
         }
-        grupo.estado = false;
+        grupo.estado = nuevoEstado;
         await grupo.save();
         return grupo;
     } catch (error) {
@@ -256,6 +256,6 @@ async function listarGruposPorUsuario(id_usuario) {
 
 
 export default {
-    crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR, listarGruposPorMateria,
+    crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR, listarGruposPorMateria,
     listarGruposHabilitadosPorMateria, listarGruposPorUsuario
 };

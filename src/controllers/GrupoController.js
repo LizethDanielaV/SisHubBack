@@ -21,11 +21,12 @@ async function crearGrupo(req, res) {
 }
 
 
-async function deshabilitarGrupo(req, res) {
+async function actualizarEstado(req, res) {
     try {
         const { id_grupo } = req.params;
-        const grupoDeshabilitado = await GrupoService.deshabilitarGrupo(id_grupo);
-        res.status(200).json(grupoDeshabilitado);
+        const { nuevoEstado } = req.body; // Espera un booleano en el cuerpo de la solicitud
+        const grupoActualizado = await GrupoService.actualizarEstado(id_grupo, nuevoEstado);
+        res.status(200).json(grupoActualizado);
     } catch (error) {
         res.status(error.statusCode || 500).json({
             message: error.message || "Error interno del servidor",
@@ -100,6 +101,6 @@ async function listarGruposPorUsuario(req, res) {
 }
 
 export default {
-    crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR,
+    crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR,
     listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario
 };
