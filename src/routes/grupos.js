@@ -6,5 +6,7 @@ const router = Router();
 router.post("/", GrupoController.crearGrupo);
 router.patch("/:id_grupo/deshabilitar", GrupoController.deshabilitarGrupo);
 router.get("/generar-clave", GrupoController.generarClaveAcceso);
+router.get("/:id_grupo/generar-qr", GrupoController.generarCodigoQR);
+
 
 export default router;
