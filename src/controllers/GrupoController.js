@@ -65,4 +65,15 @@ async function listarGruposPorMateria(req, res) {
   }
 }
 
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria };
+
+
+async function listarGruposHabilitadosPorMateria(req, res) {
+  try {
+    const { id_materia } = req.params;
+    const grupos = await GrupoService.listarGruposHabilitadosPorMateria(id_materia);
+    res.status(200).json(grupos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
