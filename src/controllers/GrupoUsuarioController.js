@@ -10,4 +10,14 @@ async function unirseAGrupoPorIdYClave(req, res) {
     }
 }
 
-export default { unirseAGrupoPorIdYClave };
+async function listarParticipantesGrupo(req, res) {
+    const { id_grupo } = req.params;
+    try {
+        const resultado = await GrupoUsuarioService.listarParticipantesGrupo(id_grupo);
+        res.status(200).json(resultado);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export default { unirseAGrupoPorIdYClave, listarParticipantesGrupo };

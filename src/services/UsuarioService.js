@@ -1,4 +1,6 @@
 import Usuario from '../models/Usuario.js';
+import admin from "../firebaseAdmin.js";
+
 
 async function listarDocentes() {
     try {
@@ -12,4 +14,20 @@ async function listarDocentes() {
     }
 }
 
-export default { listarDocentes };
+async function obtenerFotoPerfil(uid_firebase) {
+    try {
+        const userRecord = await admin.auth().getUser(uid_firebase);
+        return {
+            success: true,
+            photoURL: userRecord.photoURL || null,
+            displayName: userRecord.displayName
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: 'Usuario no encontrado'
+        };
+    }
+}
+
+export default { listarDocentes, obtenerFotoPerfil };
