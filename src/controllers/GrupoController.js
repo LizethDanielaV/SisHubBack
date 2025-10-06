@@ -55,6 +55,18 @@ async function generarCodigoQR(req, res) {
     }
 }
 
+async function obtenerClaveYCodigoQR(req, res) {
+    try {
+        const { id_grupo } = req.params;
+        const resultado = await GrupoService.obtenerClaveYCodigoQR(id_grupo);
+        res.status(200).json(resultado);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || "Error interno al obtener la clave y el código QR"
+        });
+    }
+}
+
 async function listarGruposPorMateria(req, res) {
   try {
     const { id_materia } = req.params;
@@ -76,4 +88,4 @@ async function listarGruposHabilitadosPorMateria(req, res) {
     res.status(500).json({ message: error.message });
   }
 }
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
