@@ -56,24 +56,38 @@ async function generarCodigoQR(req, res) {
 }
 
 async function listarGruposPorMateria(req, res) {
-  try {
-    const { id_materia } = req.params;
-    const grupos = await GrupoService.listarGruposPorMateria(id_materia);
-    res.status(200).json(grupos);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    try {
+        const { id_materia } = req.params;
+        const grupos = await GrupoService.listarGruposPorMateria(id_materia);
+        res.status(200).json(grupos);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 }
 
 
 
 async function listarGruposHabilitadosPorMateria(req, res) {
-  try {
-    const { id_materia } = req.params;
-    const grupos = await GrupoService.listarGruposHabilitadosPorMateria(id_materia);
-    res.status(200).json(grupos);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    try {
+        const { id_materia } = req.params;
+        const grupos = await GrupoService.listarGruposHabilitadosPorMateria(id_materia);
+        res.status(200).json(grupos);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 }
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
+
+async function listarGruposPorUsuario(req, res) {
+    try {
+        const { id_usuario } = req.params;
+        const grupos = await GrupoService.listarGruposPorUsuario(id_usuario);
+        res.status(200).json(grupos);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+export default {
+    crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR,
+    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario
+};

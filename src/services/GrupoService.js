@@ -5,6 +5,8 @@ import QRCode from 'qrcode';
 import { Sequelize } from "sequelize";
 import Usuario from '../models/Usuario.js';
 import Rol from '../models/Rol.js';
+import Materia from '../models/Materia.js';
+import Area from '../models/Area.js';
 
 async function crearGrupo(nombre, clave_acceso, semestre, id_materia, id_docente) {
     if (!nombre || !semestre || !id_materia || !id_docente) {
@@ -141,9 +143,9 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
 
     try {
         const grupos = await Grupo.findAll({
-            where: { 
-                id_materia, 
-                estado: true 
+            where: {
+                id_materia,
+                estado: true
             },
             attributes: [
                 "id_grupo",
@@ -172,7 +174,7 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
             raw: true
         });
 
-        
+
         return grupos.map(grupo => ({
             id_grupo: grupo.id_grupo,
             nombre: grupo.nombre,
@@ -187,4 +189,54 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
 }
 
 
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
+
+async function listarGruposPorUsuario(id_usuario) {
+    if (!id_usuario) {
+        throw new Error("El ID del docente es obligatorio");
+    }
+
+    try {
+        const grupos = await Grupo.findAll({
+            include: [
+                {
+                    model: GrupoUsuario,
+                    required: true,
+                    where: { id_usuario }
+                },
+                {
+                    model: Materia,
+                    attributes: ['nombre', "codigo", "creditos", "prerrequisitos", "tipo"],
+                    include: [
+                        {
+                            model: Area,
+                            attributes: ['nombre'],
+                        }
+                    ]
+                }
+            ],
+            raw: true,
+            nest: true
+
+        });
+
+        return grupos.map(g => ({
+            id_grupo: g.id_grupo,
+            nombre_grupo: g.nombre,
+            codigo_materia: g.Materium?.codigo,
+            nombre_materia: g.Materium.nombre,
+            creditos: g.Materium.creditos,
+            prerrequisitos: g.Materium.prerrequisitos || "Ninguno",
+            area_conocimiento: g.Materium.Area?.nombre || "No especificada",
+            estado: g.estado ? "Habilitado" : "Deshabilitado"
+        }));
+    } catch (error) {
+        throw new Error("Error al listar los grupos del docente: " + error.message);
+    }
+
+}
+
+
+export default {
+    crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria,
+    listarGruposHabilitadosPorMateria, listarGruposPorUsuario
+};

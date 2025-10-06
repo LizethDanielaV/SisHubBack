@@ -9,6 +9,7 @@ router.get("/generar-clave", GrupoController.generarClaveAcceso);
 router.get("/:id_grupo/generar-qr", GrupoController.generarCodigoQR);
 router.get("/materia/:id_materia", GrupoController.listarGruposPorMateria);
 router.get("/materia/:id_materia/habilitados", GrupoController.listarGruposHabilitadosPorMateria);
+router.get("/usuario/:id_usuario", GrupoController.listarGruposPorUsuario);
 
 
 export default router;
