@@ -1,6 +1,7 @@
 import Grupo from '../models/Grupo.js';
 import GrupoUsuario from '../models/GrupoUsuario.js';
-import crypto from "crypto" ;
+import crypto from "crypto";
+import QRCode from 'qrcode';
 
 async function crearGrupo(nombre, clave_acceso, semestre, id_materia, id_docente) {
     if (!nombre || !semestre || !id_materia || !id_docente) {
@@ -50,9 +51,29 @@ async function deshabilitarGrupo(id_grupo) {
 
 function generarClaveAcceso() {
     return crypto.randomBytes(Math.ceil(4))
-               .toString("hex")
-               .slice(0, 8) 
-               .toUpperCase(); 
+        .toString("hex")
+        .slice(0, 8)
+        .toUpperCase();
 }
 
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso };
+
+
+async function generarCodigoQR(id_grupo) {
+    if (!id_grupo) {
+        throw new Error("ID de grupo es requerido");
+    }
+    try {
+        const grupo = await Grupo.findByPk(id_grupo);
+        if (!grupo) {
+            throw new Error("Grupo no encontrado");
+        }
+
+        const url = `${process.env.BASE_URL_FRONTEND}/student/group/${grupo.id_grupo}?clave=${grupo.clave_acceso}`;
+        const qr = await QRCode.toDataURL(url);
+        return { id_grupo, qr };
+    } catch (error) {
+        throw new Error("Error al generar el codigo QR: " + error.message);
+    }
+}
+
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR };
