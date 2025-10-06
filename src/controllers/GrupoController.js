@@ -24,7 +24,7 @@ async function crearGrupo(req, res) {
 async function actualizarEstado(req, res) {
     try {
         const { id_grupo } = req.params;
-        const { nuevoEstado } = req.body; // Espera un booleano en el cuerpo de la solicitud
+        const { nuevoEstado } = req.body; 
         const grupoActualizado = await GrupoService.actualizarEstado(id_grupo, nuevoEstado);
         res.status(200).json(grupoActualizado);
     } catch (error) {
