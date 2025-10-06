@@ -12,6 +12,7 @@ router.get("/materia/:id_materia", GrupoController.listarGruposPorMateria);
 router.get("/materia/:id_materia/habilitados", GrupoController.listarGruposHabilitadosPorMateria);
 router.get("/usuario/:id_usuario", GrupoController.listarGruposPorUsuario);
 router.get("/", GrupoController.listarTodosLosGrupos);
+router.get("/filtrar", GrupoController.filtrarGrupos);
 
 
 export default router;

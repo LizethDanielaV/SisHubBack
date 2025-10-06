@@ -108,7 +108,22 @@ async function listarTodosLosGrupos(req, res) {
     }
 }
 
+async function filtrarGrupos(req, res) {
+    try {
+        const { codigo_materia, tipo_materia, area_conocimiento } = req.query;
+        const filtros = {
+            codigo_materia,
+            tipo_materia,
+            area_conocimiento
+        };
+        const grupos = await GrupoService.filtrarGrupos(filtros);
+        res.status(200).json(grupos);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 export default {
     crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR,
-    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos
+    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos, filtrarGrupos
 };
