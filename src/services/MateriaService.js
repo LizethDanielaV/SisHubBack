@@ -41,7 +41,11 @@ async function actualizar(idMateria, nuevosDatos) {
 
  async function listar() {
   try {
-    const materias = await Materia.findAll();
+    const materias = await Materia.findAll({
+      include: [{
+         model: Area,
+          attributes: ['nombre'] }],
+    });
     return materias;
   } catch (error) {
     throw new Error("Error al obtener las materias " + error.message);
