@@ -134,4 +134,57 @@ async function listarGruposPorMateria(id_materia) {
 }
 
 
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria };
+async function listarGruposHabilitadosPorMateria(id_materia) {
+    if (!id_materia) {
+        throw new Error("El ID de la materia es obligatorio");
+    }
+
+    try {
+        const grupos = await Grupo.findAll({
+            where: { 
+                id_materia, 
+                estado: true // 👈 solo grupos habilitados
+            },
+            attributes: [
+                "id_grupo",
+                "nombre",
+                "clave_acceso",
+                [
+                    Sequelize.literal(`(
+                        SELECT COUNT(*) 
+                        FROM grupo_usuario gu 
+                        WHERE gu.id_grupo = Grupo.id_grupo
+                    )`),
+                    "participantes"
+                ],
+                [
+                    Sequelize.literal(`(
+                        SELECT u.nombre 
+                        FROM grupo_usuario gu
+                        JOIN Usuario u ON gu.id_usuario = u.id_usuario
+                        WHERE gu.id_grupo = Grupo.id_grupo 
+                        AND u.id_rol = 2
+                        LIMIT 1
+                    )`),
+                    "docente"
+                ]
+            ],
+            raw: true
+        });
+
+        // Formatear resultado final
+        return grupos.map(grupo => ({
+            id_grupo: grupo.id_grupo,
+            nombre: grupo.nombre,
+            clave_acceso: grupo.clave_acceso,
+            participantes: grupo.participantes,
+            docente: grupo.docente || "No asignado"
+        }));
+
+    } catch (error) {
+        throw new Error("Error al listar grupos habilitados: " + error.message);
+    }
+}
+
+
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
