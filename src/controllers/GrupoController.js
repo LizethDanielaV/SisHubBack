@@ -55,4 +55,14 @@ async function generarCodigoQR(req, res) {
     }
 }
 
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR };
+async function listarGruposPorMateria(req, res) {
+  try {
+    const { id_materia } = req.params;
+    const grupos = await GrupoService.listarGruposPorMateria(id_materia);
+    res.status(200).json(grupos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria };
