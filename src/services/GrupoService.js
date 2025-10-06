@@ -259,7 +259,7 @@ async function listarTodosLosGrupos() {
             include: [
                 {
                     model: Materia,
-                    attributes: ['codigo', 'creditos', 'prerrequisitos'],
+                    attributes: ['codigo', 'creditos', 'prerrequisitos', 'tipo'],
                     include: [
                         {
                             model: Area,
@@ -284,6 +284,7 @@ async function listarTodosLosGrupos() {
             creditos: g.Materium?.creditos,
             prerrequisitos: g.Materium?.prerrequisitos || "Ninguno",
             area_conocimiento: g.Materium?.Area?.nombre || "No especificada",
+            tipo_materia: g.Materium?.tipo,
             estado: g.estado ? 1 : 0
         }));
     } catch (error) {
@@ -291,8 +292,33 @@ async function listarTodosLosGrupos() {
     }
 }
 
+async function filtrarGrupos({ codigo_materia, tipo_materia, area_conocimiento }) {
+    try {
+        // Obtener todos los grupos
+        const grupos = await listarTodosLosGrupos();
+
+        // Aplicar filtros dinámicamente
+        const gruposFiltrados = grupos.filter(grupo => {
+            let cumple = true;
+            if (codigo_materia) {
+                cumple = cumple && grupo.codigo_materia === codigo_materia;
+            }
+            if (tipo_materia) {
+                cumple = cumple && grupo.tipo_materia === tipo_materia;
+            }
+            if (area_conocimiento) {
+                cumple = cumple && grupo.area_conocimiento === area_conocimiento;
+            }
+            return cumple;
+        });
+
+        return gruposFiltrados;
+    } catch (error) {
+        throw new Error("Error al filtrar los grupos: " + error.message);
+    }
+}
 
 export default {
     crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR, listarGruposPorMateria,
-    listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos
+    listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos, filtrarGrupos
 };
