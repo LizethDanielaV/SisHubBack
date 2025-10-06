@@ -1,20 +1,21 @@
 import MateriaService from "../services/MateriaService.js";
 
 async function crear(req, res) {
-    try {
-        const materia = await MateriaService.crear(
-            req.body.codigo, 
-            req.body.nombre, 
-            req.body.creditos,
-            req.body.prerrequisitos,
-            req.body.tipo,
-            req.body.id_area)
-        res.status(200).json(materia);
-    } catch (error) {
-        res.status(error.statusCode || 500).json({
-            message: error.message || "Error interno del servidor",
-          });
-    }
+  try {
+    const materia = await MateriaService.crear(
+      req.body.codigo,
+      req.body.nombre,
+      req.body.semestre,
+      req.body.creditos,
+      req.body.prerrequisitos,
+      req.body.tipo,
+      req.body.id_area)
+    res.status(200).json(materia);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      message: error.message || "Error interno del servidor",
+    });
+  }
 };
 
 async function actualizar(req, res) {
@@ -27,12 +28,12 @@ async function actualizar(req, res) {
     res.status(200).json(materiaActualizada);
   } catch (error) {
     res.status(error.statusCode || 500).json({
-            message: error.message || "Error al actualizar la materia",
-          });
+      message: error.message || "Error al actualizar la materia",
+    });
   }
 }
 
- async function listar(req, res) {
+async function listar(req, res) {
   try {
     const materias = await MateriaService.listar();
     res.json(materias);
@@ -53,4 +54,4 @@ export async function buscarPorId(req, res) {
       .json({ message: "Error al obtener la materia", error: error.message });
   }
 }
-export default {crear, actualizar, listar, buscarPorId};
+export default { crear, actualizar, listar, buscarPorId };

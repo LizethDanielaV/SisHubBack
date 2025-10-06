@@ -6,8 +6,8 @@ import { Sequelize } from "sequelize";
 import Materia from '../models/Materia.js';
 import Area from '../models/Area.js';
 
-async function crearGrupo(nombre, clave_acceso, semestre, id_materia, id_docente) {
-    if (!nombre || !semestre || !id_materia || !id_docente) {
+async function crearGrupo(nombre, clave_acceso, id_materia, id_docente) {
+    if (!nombre || !id_materia || !id_docente) {
         throw new Error("Datos incompletos");
     }
 
@@ -16,7 +16,6 @@ async function crearGrupo(nombre, clave_acceso, semestre, id_materia, id_docente
             nombre: nombre,
             clave_acceso: clave_acceso,
             estado: true,
-            semestre: semestre,
             id_materia: id_materia
         });
 

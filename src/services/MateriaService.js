@@ -1,9 +1,9 @@
 import Materia from "../models/Materia.js";
 import Area from "../models/Area.js";
 
-async function crear(codigo, nombre, creditos, prerrequisitos, tipo, idArea) {
-    isNaN
-  if (!codigo || !nombre || !creditos || !prerrequisitos || !tipo || !idArea || isNaN(creditos) || isNaN(idArea)) {
+async function crear(codigo, nombre,semestre, creditos, prerrequisitos, tipo, idArea) {
+  isNaN
+  if (!codigo || !nombre || !creditos ||!semestre || !prerrequisitos || !tipo || !idArea || isNaN(creditos) || isNaN(idArea)) {
     throw new Error("Datos no válidos");
   }
   try {
@@ -15,6 +15,7 @@ async function crear(codigo, nombre, creditos, prerrequisitos, tipo, idArea) {
     const materia = await Materia.create({
       codigo: codigo,
       nombre: nombre,
+      semestre: semestre,
       creditos: creditos,
       prerrequisitos: prerrequisitos,
       tipo: tipo,
@@ -28,23 +29,24 @@ async function crear(codigo, nombre, creditos, prerrequisitos, tipo, idArea) {
 
 
 async function actualizar(idMateria, nuevosDatos) {
-    const materiaExistente = await Materia.findByPk(idMateria);
-  
-    if (!materiaExistente) {
-      throw new Error("Materia no encontrada");
-    }
-  
-    await materiaExistente.update(nuevosDatos);
-  
-    return materiaExistente; 
+  const materiaExistente = await Materia.findByPk(idMateria);
+
+  if (!materiaExistente) {
+    throw new Error("Materia no encontrada");
   }
 
- async function listar() {
+  await materiaExistente.update(nuevosDatos);
+
+  return materiaExistente;
+}
+
+async function listar() {
   try {
     const materias = await Materia.findAll({
       include: [{
-         model: Area,
-          attributes: ['nombre'] }],
+        model: Area,
+        attributes: ['nombre']
+      }],
     });
     return materias;
   } catch (error) {
@@ -52,7 +54,7 @@ async function actualizar(idMateria, nuevosDatos) {
   }
 }
 
- async function buscarPorId(idMateria) {
+async function buscarPorId(idMateria) {
   if (!idMateria || isNaN(idMateria)) {
     throw new Error("El id no es válido");
   }
@@ -65,7 +67,7 @@ async function actualizar(idMateria, nuevosDatos) {
     return materiaBuscada;
   } catch (error) {
     throw new Error("Error al obtener la materia " + error.message);
-    }
- }
+  }
+}
 
-export default {crear, actualizar, listar, buscarPorId};
+export default { crear, actualizar, listar, buscarPorId };

@@ -6,7 +6,6 @@ async function crearGrupo(req, res) {
         const grupo = await GrupoService.crearGrupo(
             req.body.nombre,
             req.body.clave_acceso,
-            req.body.semestre,
             req.body.id_materia,
             req.body.id_docente
         );

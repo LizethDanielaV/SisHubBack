@@ -6,6 +6,7 @@ const Materia = db.define("Materia", {
     id_materia: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true}, 
     codigo: {type: DataTypes.STRING(20), allowNull: false, unique: true},
     nombre: {type: DataTypes.STRING(100), allowNull: false},
+    semestre: { type: DataTypes.STRING(2), allowNull: false},
     creditos: {type: DataTypes.INTEGER, allowNull: false}, 
     prerrequisitos: {type: DataTypes.STRING(100)},
     tipo: {type: DataTypes.STRING(100)}
