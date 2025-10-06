@@ -9,7 +9,7 @@ export const registrarUsuario = async (req, res) => {
     const uid = req.userFirebase.uid;
     const userRecord = await admin.auth().getUser(uid);
 
-    const { documento, telefono, codigo, rol, nombre } = req.body;
+    const { documento, telefono, codigo, rol } = req.body;
 
     const rolDb = await Rol.findOne({ where: { descripcion: rol } });
     if (!rolDb) return res.status(400).json({ error: "Rol no válido" });
@@ -34,6 +34,7 @@ export const registrarUsuario = async (req, res) => {
         documento,
         correo: userRecord.email,
         telefono,
+        codigo,
         uid_firebase: uid,
         id_rol: rolDb.id_rol,
         id_estado: estadoInicial
@@ -43,6 +44,7 @@ export const registrarUsuario = async (req, res) => {
         nombre: userRecord.displayName || nombre,
         documento,
         telefono,
+        codigo,
         id_rol: rolDb.id_rol,
         id_estado: estadoInicial
       });
