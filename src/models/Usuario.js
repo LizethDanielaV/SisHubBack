@@ -5,6 +5,7 @@ import Estado from "./Estado.js";
 
 const Usuario  = db.define("Usuario", {
     id_usuario: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    codigo: { type: DataTypes.STRING(10), allowNull: false},
     nombre: { type: DataTypes.STRING(100), allowNull: false},
     documento: {type: DataTypes.STRING(20), unique: true, allowNull: false},
     correo: {type: DataTypes.STRING(100), unique: true, allowNull: false}, 
