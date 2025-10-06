@@ -99,7 +99,16 @@ async function listarGruposPorUsuario(req, res) {
     }
 }
 
+async function listarTodosLosGrupos(req, res) {
+    try {
+        const grupos = await GrupoService.listarTodosLosGrupos();
+        res.status(200).json(grupos);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 export default {
     crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR,
-    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario
+    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos
 };

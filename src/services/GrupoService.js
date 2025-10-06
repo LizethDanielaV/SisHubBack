@@ -253,8 +253,46 @@ async function listarGruposPorUsuario(id_usuario) {
 
 }
 
+async function listarTodosLosGrupos() {
+    try {
+        const grupos = await Grupo.findAll({
+            include: [
+                {
+                    model: Materia,
+                    attributes: ['codigo', 'creditos', 'prerrequisitos'],
+                    include: [
+                        {
+                            model: Area,
+                            attributes: ['nombre']
+                        }
+                    ]
+                }
+            ],
+            attributes: [
+                'id_grupo',
+                'nombre',
+                'estado'
+            ],
+            raw: true,
+            nest: true
+        });
+
+        return grupos.map(g => ({
+            id_grupo: g.id_grupo,
+            nombre: g.nombre,
+            codigo_materia: g.Materium?.codigo,
+            creditos: g.Materium?.creditos,
+            prerrequisitos: g.Materium?.prerrequisitos || "Ninguno",
+            area_conocimiento: g.Materium?.Area?.nombre || "No especificada",
+            estado: g.estado ? 1 : 0
+        }));
+    } catch (error) {
+        throw new Error("Error al listar todos los grupos: " + error.message);
+    }
+}
+
 
 export default {
     crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR, listarGruposPorMateria,
-    listarGruposHabilitadosPorMateria, listarGruposPorUsuario
+    listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos
 };
