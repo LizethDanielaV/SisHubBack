@@ -9,8 +9,8 @@ async function usuarioYaEnGrupo(id_usuario, id_grupo) {
     return !!existe;
 }
 
-async function unirseAGrupoPorNombreYClave(id_usuario, nombre_grupo, clave_acceso) {
-    if (!id_usuario || !nombre_grupo || !clave_acceso) {
+async function unirseAGrupoPorIdYClave(id_usuario, id_grupo, clave_acceso) {
+    if (!id_usuario || !id_grupo || !clave_acceso) {
         throw new Error("Datos incompletos");
     }
 
@@ -20,8 +20,8 @@ async function unirseAGrupoPorNombreYClave(id_usuario, nombre_grupo, clave_acces
         throw new Error("Solo los estudiantes pueden unirse a grupos");
     }
 
-    // Buscar grupo por nombre y verificar que esté habilitado
-    const grupo = await Grupo.findOne({ where: { nombre: nombre_grupo, estado: true } });
+    // Buscar grupo por id y verificar que esté habilitado
+    const grupo = await Grupo.findOne({ where: { id_grupo, estado: true } });
     if (!grupo) {
         throw new Error("Grupo no encontrado o no disponible");
     }
@@ -49,4 +49,4 @@ async function unirseAGrupoPorNombreYClave(id_usuario, nombre_grupo, clave_acces
     }
 }
 
-export default { unirseAGrupoPorNombreYClave };
+export default { unirseAGrupoPorIdYClave };

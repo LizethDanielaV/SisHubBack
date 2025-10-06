@@ -3,6 +3,6 @@ import GrupoUsuarioController from "../controllers/GrupoUsuarioController.js";
 
 const router = Router();
 
-router.post("/unirse", GrupoUsuarioController.unirseAGrupoPorNombreYClave);
+router.post("/unirse", GrupoUsuarioController.unirseAGrupoPorIdYClave);
 
 export default router;
