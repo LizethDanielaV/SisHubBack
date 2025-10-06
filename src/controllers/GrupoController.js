@@ -1,6 +1,5 @@
 import GrupoService from "../services/GrupoService.js";
 
-
 async function crearGrupo(req, res) {
 
     try {
@@ -42,4 +41,18 @@ function generarClaveAcceso(req, res) {
         res.status(500).json({ message: "Error al generar la clave de acceso", error: error.message });
     }
 }
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso };
+
+
+async function generarCodigoQR(req, res) {
+    try {
+        const { id_grupo } = req.params;
+        const resultado = await GrupoService.generarCodigoQR(id_grupo);
+        res.status(200).json(resultado);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || "Error interno al generar el código QR"
+        });
+    }
+}
+
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR };
