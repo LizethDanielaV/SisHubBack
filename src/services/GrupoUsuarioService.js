@@ -1,6 +1,7 @@
 import GrupoUsuario from '../models/GrupoUsuario.js';
 import Grupo from '../models/Grupo.js';
 import Usuario from '../models/Usuario.js';
+import UsuarioService from "../services/UsuarioService.js";
 
 async function usuarioYaEnGrupo(id_usuario, id_grupo) {
     const existe = await GrupoUsuario.findOne({
@@ -49,4 +50,36 @@ async function unirseAGrupoPorIdYClave(id_usuario, id_grupo, clave_acceso) {
     }
 }
 
-export default { unirseAGrupoPorIdYClave };
+async function listarParticipantesGrupo(id_grupo) {
+    try {
+        // Buscar todos los usuarios del grupo
+        const participantes = await GrupoUsuario.findAll({
+            where: { id_grupo },
+            include: [{
+                model: Usuario,
+                attributes: ['id_usuario', 'nombre', 'uid_firebase', 'codigo']
+            }]
+        });
+
+        // Obtener la foto de cada usuario usando UsuarioService.obtenerFotoPerfil
+        const resultado = await Promise.all(participantes.map(async (p) => {
+            let fotoObj;
+            try {
+                fotoObj = await UsuarioService.obtenerFotoPerfil(p.Usuario.uid_firebase);
+            } catch (error) {
+                fotoObj = { photoURL: null };
+            }
+            return {
+                codigo: p.Usuario.codigo,
+                nombre: p.Usuario.nombre,
+                foto: fotoObj.photoURL || null
+            };
+        }));
+
+        return resultado;
+    } catch (error) {
+        throw new Error("Error al listar participantes: " + error.message);
+    }
+}
+
+export default { unirseAGrupoPorIdYClave, listarParticipantesGrupo };
