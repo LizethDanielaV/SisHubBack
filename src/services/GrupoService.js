@@ -79,6 +79,27 @@ async function generarCodigoQR(id_grupo) {
     }
 }
 
+async function obtenerClaveYCodigoQR(id_grupo) {
+    if (!id_grupo) {
+        throw new Error("ID de grupo es requerido");
+    }
+    try {
+        const grupo = await Grupo.findByPk(id_grupo);
+        if (!grupo) {
+            throw new Error("Grupo no encontrado");
+        }
+
+        // Reutiliza el método para generar el QR
+        const { qr } = await generarCodigoQR(id_grupo);
+
+        return {
+            clave_acceso: grupo.clave_acceso,
+            qr
+        };
+    } catch (error) {
+        throw new Error("Error al obtener la clave y el código QR: " + error.message);
+    }
+}
 
 async function listarGruposPorMateria(id_materia) {
     if (!id_materia) {
@@ -187,4 +208,4 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
 }
 
 
-export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
+export default { crearGrupo, deshabilitarGrupo, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR, listarGruposPorMateria, listarGruposHabilitadosPorMateria };
