@@ -3,8 +3,6 @@ import GrupoUsuario from '../models/GrupoUsuario.js';
 import crypto from "crypto";
 import QRCode from 'qrcode';
 import { Sequelize } from "sequelize";
-import Usuario from '../models/Usuario.js';
-import Rol from '../models/Rol.js';
 import Materia from '../models/Materia.js';
 import Area from '../models/Area.js';
 
