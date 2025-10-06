@@ -143,7 +143,7 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
         const grupos = await Grupo.findAll({
             where: { 
                 id_materia, 
-                estado: true // 👈 solo grupos habilitados
+                estado: true 
             },
             attributes: [
                 "id_grupo",
@@ -172,7 +172,7 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
             raw: true
         });
 
-        // Formatear resultado final
+        
         return grupos.map(grupo => ({
             id_grupo: grupo.id_grupo,
             nombre: grupo.nombre,
