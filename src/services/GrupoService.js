@@ -11,6 +11,11 @@ async function crearGrupo(nombre, clave_acceso, id_materia, id_docente) {
         throw new Error("Datos incompletos");
     }
 
+    const grupoExistente = await Grupo.findOne({ where: { nombre } });
+    if (grupoExistente) {
+        throw new Error("Ya existe un grupo con ese nombre");
+    }
+
     try {
         const nuevoGrupo = await Grupo.create({
             nombre: nombre,
