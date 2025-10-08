@@ -70,4 +70,14 @@ async function buscarPorId(idMateria) {
   }
 }
 
-export default { crear, actualizar, listar, buscarPorId };
+async function listarCodigos() {
+  try {
+    const materias = await Materia.findAll({
+      attributes: ['id_materia', 'codigo', 'nombre'] 
+    });
+    return materias;
+  } catch (error) {
+    throw new Error("Error al obtener las materias " + error.message);
+  }
+}
+export default { crear, actualizar, listar, buscarPorId, listarCodigos };
