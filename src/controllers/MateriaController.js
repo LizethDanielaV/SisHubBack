@@ -54,4 +54,17 @@ export async function buscarPorId(req, res) {
       .json({ message: "Error al obtener la materia", error: error.message });
   }
 }
-export default { crear, actualizar, listar, buscarPorId };
+
+async function listarCodigos(req, res) {
+  try {
+    const materias = await MateriaService.listarCodigos();
+    res.json(materias);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+
+export default { crear, actualizar, listar, buscarPorId, listarCodigos };
