@@ -9,4 +9,5 @@ router.post("/",verificarToken, verificarRol([1]), MateriaController.crear);
 router.put("/:id_materia", verificarToken, verificarRol([1]), MateriaController.actualizar);
 router.get("/", verificarToken, verificarRol([1, 2, 3]), MateriaController.listar);
 router.get("/:id_materia", verificarToken, verificarRol([1, 2, 3]), MateriaController.buscarPorId);
+router.get("/codigos", verificarToken, verificarRol([1, 2, 3]), MateriaController.listarCodigos);
 export default router;
