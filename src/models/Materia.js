@@ -3,8 +3,7 @@ import { DataTypes } from "sequelize";
 import Area from "./Area.js";
 
 const Materia = db.define("Materia", {
-    id_materia: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true}, 
-    codigo: {type: DataTypes.STRING(20), allowNull: false, unique: true},
+    codigo: {type: DataTypes.STRING(20), primaryKey: true},
     nombre: {type: DataTypes.STRING(100), allowNull: false},
     semestre: { type: DataTypes.STRING(2), allowNull: false},
     creditos: {type: DataTypes.INTEGER, allowNull: false}, 

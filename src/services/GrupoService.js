@@ -6,17 +6,14 @@ import { Sequelize } from "sequelize";
 import Materia from "../models/Materia.js";
 import Area from "../models/Area.js";
 
-async function crearGrupo(nombre, clave_acceso, id_materia, id_docente) {
-    if (!nombre || !id_materia || !id_docente) {
-        throw new Error("Datos incompletos");
-    }
-
-    const grupoExistente = await Grupo.findOne({ where: { nombre, id_materia } });
-    if (grupoExistente) {
-        throw new Error("Ya existe un grupo con ese nombre");
-    }
-  if (!nombre || !id_materia || !id_docente) {
+async function crearGrupo(nombre, clave_acceso, codigo_materia, id_docente, periodo, anio) {
+  if (!nombre || !codigo_materia || !id_docente || !periodo || !anio) {
     throw new Error("Datos incompletos");
+  }
+
+  const grupoExistente = await Grupo.findOne({ where: { codigo_materia, nombre, periodo, anio } });
+  if (grupoExistente) {
+    throw new Error("Ya existe un grupo con ese nombre");
   }
 
   try {
@@ -24,7 +21,7 @@ async function crearGrupo(nombre, clave_acceso, id_materia, id_docente) {
       nombre: nombre,
       clave_acceso: clave_acceso,
       estado: true,
-      id_materia: id_materia,
+      codigo_materia: codigo_materia,
     });
 
     const nuevoGrupoUsuario = await GrupoUsuario.create({
@@ -273,7 +270,7 @@ async function listarTodosLosGrupos() {
           include: [
             {
               model: Area,
-              attributes: ['nombre', 'id_area'] 
+              attributes: ['nombre', 'id_area']
             },
           ],
         },
@@ -290,7 +287,7 @@ async function listarTodosLosGrupos() {
       codigo_materia: g.Materium?.codigo,
       creditos: g.Materium?.creditos,
       prerrequisitos: g.Materium?.prerrequisitos || "Ninguno",
-       id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
+      id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
       area_conocimiento: g.Materium?.Area?.nombre || "No especificada",
       tipo_materia: g.Materium?.tipo,
       estado: g.estado ? 1 : 0,
