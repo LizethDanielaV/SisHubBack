@@ -13,10 +13,10 @@ const GrupoUsuario = db.define("grupo_usuario", {
 
 //relacion con Usuario
 Usuario.hasMany(GrupoUsuario, {
-    foreignKey: "id_usuario"
+    foreignKey: "codigo_usuario"
 });
 GrupoUsuario.belongsTo(Usuario, {
-    foreignKey: "id_usuario"
+    foreignKey: "codigo_usuario"
 });
 
 //relacion con Grupo

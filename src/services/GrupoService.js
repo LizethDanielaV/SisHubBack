@@ -22,6 +22,8 @@ async function crearGrupo(nombre, clave_acceso, codigo_materia, id_docente, peri
       clave_acceso: clave_acceso,
       estado: true,
       codigo_materia: codigo_materia,
+      periodo: periodo,
+      anio: anio
     });
 
     const nuevoGrupoUsuario = await GrupoUsuario.create({
