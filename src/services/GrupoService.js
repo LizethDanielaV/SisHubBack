@@ -231,7 +231,7 @@ async function listarGruposPorUsuario(id_usuario) {
           include: [
             {
               model: Area,
-              attributes: ["nombre"],
+              attributes: ["nombre", "id_area"],
             },
           ],
         },
@@ -247,6 +247,8 @@ async function listarGruposPorUsuario(id_usuario) {
       nombre_materia: g.Materium.nombre,
       creditos: g.Materium.creditos,
       prerrequisitos: g.Materium.prerrequisitos || "Ninguno",
+      tipo_materia: g.Materium.tipo,
+      id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
       area_conocimiento: g.Materium.Area?.nombre || "No especificada",
       estado: g.estado ? "Habilitado" : "Deshabilitado",
     }));
@@ -271,7 +273,7 @@ async function listarTodosLosGrupos() {
           include: [
             {
               model: Area,
-              attributes: ["nombre"],
+              attributes: ['nombre', 'id_area'] 
             },
           ],
         },
@@ -288,6 +290,7 @@ async function listarTodosLosGrupos() {
       codigo_materia: g.Materium?.codigo,
       creditos: g.Materium?.creditos,
       prerrequisitos: g.Materium?.prerrequisitos || "Ninguno",
+       id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
       area_conocimiento: g.Materium?.Area?.nombre || "No especificada",
       tipo_materia: g.Materium?.tipo,
       estado: g.estado ? 1 : 0,
