@@ -261,36 +261,47 @@ async function listarTodosLosGrupos() {
         {
           model: Materia,
           attributes: [
-            "nombre",
             "codigo",
+            "nombre",
+            "semestre",
             "creditos",
             "prerrequisitos",
             "tipo",
+            "id_area"
           ],
           include: [
             {
               model: Area,
-              attributes: ['nombre', 'id_area']
-            },
-          ],
-        },
+              attributes: ["id_area", "nombre"]
+            }
+          ]
+        }
       ],
-      attributes: ["id_grupo", "nombre", "estado"],
+      attributes: [
+        "id_grupo",
+        "nombre",
+        "estado",
+        "periodo",
+        "anio"
+      ],
       raw: true,
-      nest: true,
+      nest: true
     });
 
     return grupos.map((g) => ({
       id_grupo: g.id_grupo,
-      nombre: g.nombre,
-      nombre_materia: g.Materium?.nombre || "Sin nombre",
+      nombre_grupo: g.nombre,
       codigo_materia: g.Materium?.codigo,
+      nombre_materia: g.Materium?.nombre,
+      semestre: g.Materium?.semestre,
       creditos: g.Materium?.creditos,
       prerrequisitos: g.Materium?.prerrequisitos || "Ninguno",
-      id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
-      area_conocimiento: g.Materium?.Area?.nombre || "No especificada",
       tipo_materia: g.Materium?.tipo,
+      id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
+      nombre_area: g.Materium?.Area?.nombre || "No especificada",
       estado: g.estado ? 1 : 0,
+      periodo: g.periodo,
+      anio: g.anio
     }));
   } catch (error) {
     throw new Error("Error al listar todos los grupos: " + error.message);
