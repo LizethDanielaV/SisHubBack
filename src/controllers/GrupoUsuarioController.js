@@ -18,12 +18,17 @@ async function unirseAGrupoPorIdYClave(req, res) {
 }
 
 async function listarParticipantesGrupo(req, res) {
-    const { id_grupo } = req.params;
+    const { codigo_materia, nombre_grupo, periodo, anio } = req.body;
     try {
-        const resultado = await GrupoUsuarioService.listarParticipantesGrupo(id_grupo);
-        res.status(200).json(resultado);
+        const resultado = await GrupoUsuarioService.listarParticipantesGrupo(
+            codigo_materia,
+            nombre_grupo,
+            periodo,
+            anio
+        );
+        res.status(201).json(resultado);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(400).json({ error: error.message });
     }
 }
 
