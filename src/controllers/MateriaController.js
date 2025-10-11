@@ -66,5 +66,20 @@ async function listarCodigos(req, res) {
   }
 }
 
+async function subirCSV(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No se envió ningún archivo" });
+    }
 
-export default { crear, actualizar, listar, buscarPorId, listarCodigos };
+    const resultados = await MateriaService.procesarCSV(req.file.path);
+    res.status(200).json({
+      message: "Procesamiento completado",
+      resultados
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export default { crear, actualizar, listar, buscarPorId, listarCodigos, subirCSV };

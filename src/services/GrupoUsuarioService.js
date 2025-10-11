@@ -3,28 +3,52 @@ import Grupo from '../models/Grupo.js';
 import Usuario from '../models/Usuario.js';
 import UsuarioService from "../services/UsuarioService.js";
 
-async function usuarioYaEnGrupo(id_usuario, id_grupo) {
+async function usuarioYaEnGrupo(codigo_usuario, codigo_materia, nombre_grupo, periodo, anio) {
     const existe = await GrupoUsuario.findOne({
-        where: { id_usuario, id_grupo }
+        where: { 
+            codigo_usuario, 
+            codigo_materia, 
+            nombre: nombre_grupo, 
+            periodo, 
+            anio 
+        },
+        attributes: ['id_grupo_usuario']
     });
     return !!existe;
 }
 
-async function unirseAGrupoPorIdYClave(id_usuario, id_grupo, clave_acceso) {
-    if (!id_usuario || !id_grupo || !clave_acceso) {
+async function unirseAGrupoPorIdYClave(codigo_usuario, codigo_materia, nombre_grupo, periodo, anio, clave_acceso) {
+    if (!codigo_usuario || !codigo_materia || !nombre_grupo || !periodo || !anio || !clave_acceso) {
         throw new Error("Datos incompletos");
     }
 
+    // Verificar que el periodo sea válido
+    if (periodo !== "01" && periodo !== "02") {
+        throw new Error("Periodo inválido, solo '01' o '02' son aceptados");
+    }
+
+    // Verificar que el año sea un número válido
+    if (isNaN(anio) || anio < 2000 || anio > new Date().getFullYear() + 1) {
+        throw new Error("Año inválido");
+    }
+
     // Verificar que el usuario sea estudiante (id_rol === 3)
-    const usuario = await Usuario.findByPk(id_usuario);
+    const usuario = await Usuario.findByPk(codigo_usuario);
     if (!usuario || usuario.id_rol !== 3) {
         throw new Error("Solo los estudiantes pueden unirse a grupos");
     }
 
-    // Buscar grupo por id y verificar que esté habilitado
-    const grupo = await Grupo.findOne({ where: { id_grupo, estado: true } });
+    // Buscar grupo por claves compuestas
+    const grupo = await Grupo.findOne({ 
+        where: { codigo_materia, nombre: nombre_grupo, periodo, anio }
+    });
     if (!grupo) {
-        throw new Error("Grupo no encontrado o no disponible");
+        throw new Error("Grupo no encontrado");
+    }
+
+    // Verifica si el grupo está habilitado
+    if (!grupo.estado) {
+        throw new Error("El grupo no está habilitado");
     }
 
     // Comparar la clave de acceso
@@ -33,16 +57,19 @@ async function unirseAGrupoPorIdYClave(id_usuario, id_grupo, clave_acceso) {
     }
 
     // Verificar si el usuario ya está en el grupo usando la función aparte
-    if (await usuarioYaEnGrupo(id_usuario, grupo.id_grupo)) {
+    if (await usuarioYaEnGrupo(codigo_usuario, codigo_materia, nombre_grupo, periodo, anio)) {
         throw new Error("El usuario ya pertenece a este grupo");
     }
 
     // Registrar al usuario en el grupo
     try {
         const nuevoGrupoUsuario = await GrupoUsuario.create({
-            fecha_ingreso: new Date(),
-            id_usuario,
-            id_grupo: grupo.id_grupo
+            codigo_usuario,
+            codigo_materia,
+            nombre: nombre_grupo,
+            periodo,
+            anio,
+            fecha_ingreso: new Date()
         });
         return nuevoGrupoUsuario;
     } catch (error) {
@@ -50,15 +77,21 @@ async function unirseAGrupoPorIdYClave(id_usuario, id_grupo, clave_acceso) {
     }
 }
 
-async function listarParticipantesGrupo(id_grupo) {
+async function listarParticipantesGrupo(codigo_materia, nombre_grupo, periodo, anio ) {
     try {
         // Buscar todos los usuarios del grupo
         const participantes = await GrupoUsuario.findAll({
-            where: { id_grupo },
+            where: { 
+                codigo_materia, 
+                nombre: nombre_grupo, 
+                periodo, 
+                anio 
+            },
             include: [{
                 model: Usuario,
-                attributes: ['id_usuario', 'nombre', 'uid_firebase', 'codigo']
-            }]
+                attributes: ['codigo', 'nombre', 'uid_firebase']
+            }],
+            attributes: ['id_grupo_usuario']
         });
 
         // Obtener la foto de cada usuario usando UsuarioService.obtenerFotoPerfil
