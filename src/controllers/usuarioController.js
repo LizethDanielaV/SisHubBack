@@ -354,6 +354,56 @@ export const rechazarPostulacion = async (req, res) => {
   }
 };
 
+export const cargarDocentesMasivamente = async (req, res) => {
+  try {
+    const { docentes } = req.body;
+
+    // Validar que venga el array de docentes
+    if (!docentes || !Array.isArray(docentes) || docentes.length === 0) {
+      return res.status(400).json({
+        error: "Debe enviar un array de docentes"
+      });
+    }
+
+    // Validar estructura de cada docente
+    const docentesValidos = docentes.every(d => 
+      d.codigo && d.nombre && d.documento && d.correo
+    );
+
+    if (!docentesValidos) {
+      return res.status(400).json({
+        error: "Todos los docentes deben tener código, nombre, documento y correo"
+      });
+    }
+
+    // Procesar la carga masiva
+    const resultados = await UsuarioService.cargarDocentesMasivamente(docentes);
+
+    // Determinar el código de respuesta
+    const statusCode = resultados.errores.length === 0 
+      ? 200 
+      : resultados.exitosos.length === 0 
+        ? 400 
+        : 207; // Multi-Status
+
+    return res.status(statusCode).json({
+      ok: true,
+      mensaje: `Proceso completado. ${resultados.exitosos.length} docente(s) cargado(s), ${resultados.errores.length} error(es)`,
+      exitosos: resultados.exitosos,
+      errores: resultados.errores,
+      total: docentes.length,
+      totalExitosos: resultados.exitosos.length,
+      totalErrores: resultados.errores.length
+    });
+
+  } catch (error) {
+    console.error("Error en carga masiva de docentes:", error);
+    return res.status(500).json({
+      error: "Error al procesar la carga masiva de docentes",
+      detalle: error.message
+    });
+  }
+};
 
 export const listarDocentes = async (req, res) => {
   try {
