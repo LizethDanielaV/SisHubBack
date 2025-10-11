@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { Sequelize } from "sequelize";
 import Materia from "../models/Materia.js";
 import Area from "../models/Area.js";
+import db from "../db/db.js";
 
 async function crearGrupo(codigo_materia, nombre, periodo, anio, clave_acceso, codigo_docente) {
   if (!nombre || !codigo_materia || !codigo_docente || !periodo || !anio) {
@@ -231,55 +232,69 @@ async function listarGruposHabilitadosPorMateria(codigo_materia) {
 
 async function listarGruposPorUsuario(codigo_usuario) {
   if (!codigo_usuario) {
-    throw new Error("El codigo del usuario es obligatorio");
+    throw new Error("El código del usuario es obligatorio");
   }
 
   try {
-    const grupos = await Grupo.findAll({
-      include: [
-        {
-          model: GrupoUsuario,
-          required: true,
-          where: { codigo_usuario },
-        },
-        {
-          model: Materia,
-          attributes: [
-            "nombre",
-            "codigo",
-            "creditos",
-            "prerrequisitos",
-            "tipo",
-          ],
-          include: [
-            {
-              model: Area,
-              attributes: ["nombre", "id_area"],
-            },
-          ],
-        },
-      ],
-      raw: true,
-      nest: true,
-    });
+    const resultado = await db.query(
+      `
+      SELECT 
+        g.codigo_materia,
+        g.nombre AS nombre_grupo,
+        g.periodo AS periodo_grupo,
+        g.anio AS anio_grupo,
+        g.estado,
+        g.clave_acceso,
+        m.codigo AS codigo_materia,
+        m.nombre AS nombre_materia,
+        m.creditos,
+        m.prerrequisitos,
+        m.tipo AS tipo_materia,
+        a.id_area,
+        a.nombre AS area_conocimiento
+      FROM grupo_usuario gu
+      INNER JOIN Grupo g 
+        ON g.codigo_materia = gu.codigo_materia
+       AND g.nombre = gu.nombre
+       AND g.periodo = gu.periodo
+       AND g.anio = gu.anio
+      INNER JOIN Materia m ON m.codigo = g.codigo_materia
+      LEFT JOIN Area a ON a.id_area = m.id_area
+      WHERE gu.codigo_usuario = :codigo_usuario
+      ORDER BY g.anio DESC, g.periodo DESC;
+      `,
+      {
+        replacements: { codigo_usuario },
+        type: Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    // Aseguramos que sea un array
+    const grupos = Array.isArray(resultado) ? resultado : resultado[0];
+
+    if (!grupos || grupos.length === 0) {
+      return [];
+    }
 
     return grupos.map((g) => ({
-      nombre_grupo: g.nombre,
-      periodo_grupo: g.periodo,
-      anio_grupo: g.anio,
-      codigo_materia: g.Materium?.codigo,
-      nombre_materia: g.Materium.nombre,
-      creditos: g.Materium.creditos,
-      prerrequisitos: g.Materium.prerrequisitos || "Ninguno",
-      tipo_materia: g.Materium.tipo,
-      id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
-      area_conocimiento: g.Materium.Area?.nombre || "No especificada",
+      codigo_materia: g.codigo_materia,
+      nombre_materia: g.nombre_materia,
+      creditos: g.creditos,
+      prerrequisitos: g.prerrequisitos || "Ninguno",
+      tipo_materia: g.tipo_materia,
+      nombre_grupo: g.nombre_grupo,
+      periodo_grupo: g.periodo_grupo,
+      anio_grupo: g.anio_grupo,
+      id_area: g.id_area,
+      area_conocimiento: g.area_conocimiento || "No especificada",
       estado: g.estado ? "Habilitado" : "Deshabilitado",
+      clave_acceso: g.clave_acceso,
     }));
   } catch (error) {
     throw new Error("Error al listar los grupos del docente: " + error.message);
   }
 }
+
 
 async function listarTodosLosGrupos() {
   try {
