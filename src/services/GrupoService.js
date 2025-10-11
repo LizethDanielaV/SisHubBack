@@ -298,52 +298,46 @@ async function listarGruposPorUsuario(codigo_usuario) {
 
 async function listarTodosLosGrupos() {
   try {
-    const grupos = await Grupo.findAll({
-      include: [
-        {
-          model: Materia,
-          attributes: [
-            "codigo",
-            "nombre",
-            "semestre",
-            "creditos",
-            "prerrequisitos",
-            "tipo",
-            "id_area"
-          ],
-          include: [
-            {
-              model: Area,
-              attributes: ["id_area", "nombre"]
-            }
-          ]
-        }
-      ],
-      attributes: [
-        "id_grupo",
-        "nombre",
-        "estado",
-        "periodo",
-        "anio"
-      ],
-      raw: true,
-      nest: true
-    });
+    const resultado = await db.query(
+      `
+      SELECT 
+        g.codigo_materia,
+        g.nombre AS nombre_grupo,
+        g.periodo,
+        g.anio,
+        g.estado,
+        m.nombre AS nombre_materia,
+        m.semestre,
+        m.creditos,
+        m.prerrequisitos,
+        m.tipo AS tipo_materia,
+        a.id_area,
+        a.nombre AS nombre_area
+      FROM Grupo g
+      INNER JOIN Materia m ON g.codigo_materia = m.codigo
+      LEFT JOIN Area a ON m.id_area = a.id_area
+      ORDER BY g.anio DESC, g.periodo DESC, g.codigo_materia ASC;
+      `,
+      { type: Sequelize.QueryTypes.SELECT }
+    );
 
-    return grupos.map((g) => ({
-      id_grupo: g.id_grupo,
-      nombre_grupo: g.nombre,
-      codigo_materia: g.Materium?.codigo,
-      nombre_materia: g.Materium?.nombre,
-      semestre: g.Materium?.semestre,
-      creditos: g.Materium?.creditos,
-      prerrequisitos: g.Materium?.prerrequisitos || "Ninguno",
-      tipo_materia: g.Materium?.tipo,
-      id_area: g.Materium?.id_area || g.Materium?.Area?.id_area,
-      nombre_area: g.Materium?.Area?.nombre || "No especificada",
-      estado: g.estado ? 1 : 0,
+    if (!resultado || resultado.length === 0) {
+      return [];
+    }
+
+    return resultado.map((g) => ({
+      codigo_materia: g.codigo_materia,
+      nombre_grupo: g.nombre_grupo,
       periodo: g.periodo,
-      anio: g.anio
+      anio: g.anio,
+      estado: g.estado ? "Habilitado" : "Deshabilitado",
+      nombre_materia: g.nombre_materia,
+      semestre: g.semestre,
+      creditos: g.creditos,
+      prerrequisitos: g.prerrequisitos || "Ninguno",
+      tipo_materia: g.tipo_materia,
+      id_area: g.id_area,
+      nombre_area: g.nombre_area || "No especificada",
     }));
   } catch (error) {
     throw new Error("Error al listar todos los grupos: " + error.message);
