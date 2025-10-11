@@ -66,5 +66,4 @@ async function listarCodigos(req, res) {
   }
 }
 
-
 export default { crear, actualizar, listar, buscarPorId, listarCodigos };
