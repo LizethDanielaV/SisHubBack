@@ -6,8 +6,8 @@ import { Sequelize } from "sequelize";
 import Materia from "../models/Materia.js";
 import Area from "../models/Area.js";
 
-async function crearGrupo(nombre, clave_acceso, codigo_materia, id_docente, periodo, anio) {
-  if (!nombre || !codigo_materia || !id_docente || !periodo || !anio) {
+async function crearGrupo(codigo_materia, nombre, periodo, anio, clave_acceso, codigo_docente) {
+  if (!nombre || !codigo_materia || !codigo_docente || !periodo || !anio) {
     throw new Error("Datos incompletos");
   }
 
@@ -18,18 +18,21 @@ async function crearGrupo(nombre, clave_acceso, codigo_materia, id_docente, peri
 
   try {
     const nuevoGrupo = await Grupo.create({
+      codigo_materia: codigo_materia,
       nombre: nombre,
+      periodo: periodo,
+      anio: anio,
       clave_acceso: clave_acceso,
       estado: true,
-      codigo_materia: codigo_materia,
-      periodo: periodo,
-      anio: anio
     });
 
     const nuevoGrupoUsuario = await GrupoUsuario.create({
       fecha_ingreso: new Date(),
-      id_usuario: id_docente,
-      id_grupo: nuevoGrupo.id_grupo,
+      codigo_usuario: codigo_docente,
+      codigo_materia: codigo_materia,
+      nombre: nombre,
+      periodo: periodo,
+      anio: anio
     });
 
     return nuevoGrupo;
@@ -38,12 +41,15 @@ async function crearGrupo(nombre, clave_acceso, codigo_materia, id_docente, peri
   }
 }
 
-async function actualizarEstado(id_grupo, nuevoEstado) {
-  if (!id_grupo) {
-    throw new Error("ID de grupo es requerido");
+async function actualizarEstado(codigo_materia, nombre, periodo, anio, nuevoEstado) {
+  if (!codigo_materia || !nombre || !periodo || !anio) {
+    throw new Error("Se requieren todos los identificadores del grupo");
   }
   try {
-    const grupo = await Grupo.findByPk(id_grupo);
+    const grupo = await Grupo.findOne({
+      where: { codigo_materia, nombre, periodo, anio }
+    });
+
     if (!grupo) {
       throw new Error("Grupo no encontrado");
     }
@@ -63,36 +69,46 @@ function generarClaveAcceso() {
     .toUpperCase();
 }
 
-async function generarCodigoQR(id_grupo) {
-  if (!id_grupo) {
-    throw new Error("ID de grupo es requerido");
+async function generarCodigoQR(codigo_materia, nombre, periodo, anio) {
+  if (!codigo_materia || !nombre || !periodo || !anio) {
+    throw new Error("Todos los identificadores del grupo son requeridos");
   }
   try {
-    const grupo = await Grupo.findByPk(id_grupo);
+    const grupo = await Grupo.findOne({
+      where: { codigo_materia, nombre, periodo, anio }
+    });
     if (!grupo) {
       throw new Error("Grupo no encontrado");
     }
 
-    const url = `${process.env.BASE_URL_FRONTEND}/student/group/${grupo.id_grupo}?clave=${grupo.clave_acceso}`;
+    const url = `${process.env.BASE_URL_FRONTEND}/student/group/${codigo_materia}/${nombre}/${periodo}/${anio}?clave=${grupo.clave_acceso}`;
     const qr = await QRCode.toDataURL(url);
-    return { id_grupo, qr };
+    return {
+      codigo_materia,
+      nombre,
+      periodo,
+      anio,
+      qr
+    };
   } catch (error) {
     throw new Error("Error al generar el codigo QR: " + error.message);
   }
 }
 
-async function obtenerClaveYCodigoQR(id_grupo) {
-  if (!id_grupo) {
-    throw new Error("ID de grupo es requerido");
+async function obtenerClaveYCodigoQR(codigo_materia, nombre, periodo, anio) {
+  if (!codigo_materia || !nombre || !periodo || !anio) {
+    throw new Error("Todos los identificadores del grupo son requeridos");
   }
   try {
-    const grupo = await Grupo.findByPk(id_grupo);
+    const grupo = await Grupo.findOne({
+      where: { codigo_materia, nombre, periodo, anio }
+    });
     if (!grupo) {
       throw new Error("Grupo no encontrado");
     }
 
     // Reutiliza el método para generar el QR
-    const { qr } = await generarCodigoQR(id_grupo);
+    const { qr } = await generarCodigoQR(codigo_materia, nombre, periodo, anio);
 
     return {
       clave_acceso: grupo.clave_acceso,
@@ -105,25 +121,27 @@ async function obtenerClaveYCodigoQR(id_grupo) {
   }
 }
 
-async function listarGruposPorMateria(id_materia) {
-  if (!id_materia) {
-    throw new Error("El ID de la materia es obligatorio");
+async function listarGruposPorMateria(codigo_materia) {
+  if (!codigo_materia) {
+    throw new Error("El codigo de la materia es obligatorio");
   }
 
   try {
     const grupos = await Grupo.findAll({
-      where: { id_materia },
+      where: { codigo_materia },
       distinct: true,
       attributes: [
-        "id_grupo",
+        "codigo_materia",
         "nombre",
+        "periodo",
+        "anio",
         "clave_acceso",
         "estado",
         [
           Sequelize.literal(`(
                 SELECT COUNT(*) 
                 FROM grupo_usuario gu 
-                WHERE gu.id_grupo = Grupo.id_grupo
+                WHERE gu.codigo_materia = Grupo.codigo_materia AND gu.nombre = Grupo.nombre AND gu.periodo = Grupo.periodo AND gu.anio = Grupo.anio
                 )`),
           "participantes",
         ],
@@ -131,8 +149,8 @@ async function listarGruposPorMateria(id_materia) {
           Sequelize.literal(`(
                         SELECT u.nombre 
                         FROM grupo_usuario gu
-                        JOIN Usuario u ON gu.id_usuario = u.id_usuario
-                        WHERE gu.id_grupo = Grupo.id_grupo 
+                        JOIN Usuario u ON gu.codigo_usuario = u.codigo
+                        WHERE gu.codigo_materia = Grupo.codigo_materia AND gu.nombre = Grupo.nombre AND gu.periodo = Grupo.periodo AND gu.anio = Grupo.anio
                         AND u.id_rol = 2
                         LIMIT 1
                     )`),
@@ -143,8 +161,10 @@ async function listarGruposPorMateria(id_materia) {
     });
 
     return grupos.map((grupo) => ({
-      id_grupo: grupo.id_grupo,
+      codigo_materia: grupo.codigo_materia,
       nombre: grupo.nombre,
+      periodo: grupo.periodo,
+      anio: grupo.anio,
       clave_acceso: grupo.clave_acceso,
       estado: grupo.estado ? "Habilitado" : "Deshabilitado",
       participantes: grupo.participantes,
@@ -155,26 +175,28 @@ async function listarGruposPorMateria(id_materia) {
   }
 }
 
-async function listarGruposHabilitadosPorMateria(id_materia) {
-  if (!id_materia) {
-    throw new Error("El ID de la materia es obligatorio");
+async function listarGruposHabilitadosPorMateria(codigo_materia) {
+  if (!codigo_materia) {
+    throw new Error("El codigo de la materia es obligatoria");
   }
 
   try {
     const grupos = await Grupo.findAll({
       where: {
-        id_materia,
+        codigo_materia,
         estado: true,
       },
       attributes: [
-        "id_grupo",
+        "codigo_materia",
         "nombre",
+        "periodo",
+        "anio",
         "clave_acceso",
         [
           Sequelize.literal(`(
                         SELECT COUNT(*) 
                         FROM grupo_usuario gu 
-                        WHERE gu.id_grupo = Grupo.id_grupo
+                        WHERE gu.codigo_materia = Grupo.codigo_materia AND gu.nombre = Grupo.nombre AND gu.periodo = Grupo.periodo AND gu.anio = Grupo.anio
                     )`),
           "participantes",
         ],
@@ -182,8 +204,8 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
           Sequelize.literal(`(
                         SELECT u.nombre 
                         FROM grupo_usuario gu
-                        JOIN Usuario u ON gu.id_usuario = u.id_usuario
-                        WHERE gu.id_grupo = Grupo.id_grupo 
+                        JOIN Usuario u ON gu.codigo_usuario = u.codigo
+                        WHERE gu.codigo_materia = Grupo.codigo_materia AND gu.nombre = Grupo.nombre AND gu.periodo = Grupo.periodo AND gu.anio = Grupo.anio
                         AND u.id_rol = 2
                         LIMIT 1
                     )`),
@@ -194,8 +216,10 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
     });
 
     return grupos.map((grupo) => ({
-      id_grupo: grupo.id_grupo,
+      codigo_materia: grupo.codigo_materia,
       nombre: grupo.nombre,
+      periodo: grupo.periodo,
+      anio: grupo.anio,
       clave_acceso: grupo.clave_acceso,
       participantes: grupo.participantes,
       docente: grupo.docente || "No asignado",
@@ -205,9 +229,9 @@ async function listarGruposHabilitadosPorMateria(id_materia) {
   }
 }
 
-async function listarGruposPorUsuario(id_usuario) {
-  if (!id_usuario) {
-    throw new Error("El ID del docente es obligatorio");
+async function listarGruposPorUsuario(codigo_usuario) {
+  if (!codigo_usuario) {
+    throw new Error("El codigo del usuario es obligatorio");
   }
 
   try {
@@ -216,7 +240,7 @@ async function listarGruposPorUsuario(id_usuario) {
         {
           model: GrupoUsuario,
           required: true,
-          where: { id_usuario },
+          where: { codigo_usuario },
         },
         {
           model: Materia,
@@ -240,8 +264,9 @@ async function listarGruposPorUsuario(id_usuario) {
     });
 
     return grupos.map((g) => ({
-      id_grupo: g.id_grupo,
       nombre_grupo: g.nombre,
+      periodo_grupo: g.periodo,
+      anio_grupo: g.anio,
       codigo_materia: g.Materium?.codigo,
       nombre_materia: g.Materium.nombre,
       creditos: g.Materium.creditos,
