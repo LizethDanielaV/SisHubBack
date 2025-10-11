@@ -2,16 +2,20 @@ import Materia from "../models/Materia.js";
 import Area from "../models/Area.js";
 
 async function crear(codigo, nombre,semestre, creditos, prerrequisitos, tipo, idArea) {
-  isNaN
+
   if (!codigo || !nombre || !creditos ||!semestre || !prerrequisitos || !tipo || !idArea || isNaN(creditos) || isNaN(idArea)) {
     throw new Error("Datos no válidos");
   }
+  //validar semestre
+  validarSemestre(semestre);
+  //validar creditos
+  validarCreditos(creditos);
+
   try {
     const area = await Area.findByPk(idArea);
     if (!area) {
-      throw new Error("Area no encontrado");
+      throw new Error("Area no encontrada");
     }
-
     const materia = await Materia.create({
       codigo: codigo,
       nombre: nombre,
@@ -23,6 +27,9 @@ async function crear(codigo, nombre,semestre, creditos, prerrequisitos, tipo, id
     });
     return materia;
   } catch (error) {
+    if (error.name === "SequelizeUniqueConstraintError") {
+    throw new Error("El código ya existe en la base de datos");
+  }
     throw error;
   }
 }
@@ -33,6 +40,13 @@ async function actualizar(idMateria, nuevosDatos) {
 
   if (!materiaExistente) {
     throw new Error("Materia no encontrada");
+  }
+
+  if (nuevosDatos.semestre !== undefined) {
+    validarSemestre(nuevosDatos.semestre);
+  }
+  if (nuevosDatos.creditos !== undefined) {
+    validarCreditos(nuevosDatos.creditos);
   }
 
   await materiaExistente.update(nuevosDatos);
@@ -73,11 +87,30 @@ async function buscarPorId(idMateria) {
 async function listarCodigos() {
   try {
     const materias = await Materia.findAll({
-      attributes: ['id_materia', 'codigo', 'nombre'] 
+      attributes: ['codigo', 'nombre'] 
     });
     return materias;
   } catch (error) {
     throw new Error("Error al obtener las materias " + error.message);
   }
 }
+
+function validarSemestre(semestre){
+  const semestreN = Number(semestre);
+  if(isNaN(semestreN)){
+    throw new Error("El semestre debe ser un número");
+  }
+  if(semestreN <=0 || !Number.isInteger(semestreN)){
+     throw new Error("El semestre debe ser un número natural (entero positivo)");
+  }
+  return true;
+}
+
+function validarCreditos(creditos){
+  if (!Number.isInteger(creditos) || creditos <= 0) {
+    throw new Error("Los créditos deben ser un número entero positivo");
+  }
+  return true;
+}
+
 export default { crear, actualizar, listar, buscarPorId, listarCodigos };
