@@ -77,15 +77,21 @@ async function unirseAGrupoPorIdYClave(codigo_usuario, codigo_materia, nombre_gr
     }
 }
 
-async function listarParticipantesGrupo(id_grupo) {
+async function listarParticipantesGrupo(codigo_materia, nombre_grupo, periodo, anio ) {
     try {
         // Buscar todos los usuarios del grupo
         const participantes = await GrupoUsuario.findAll({
-            where: { id_grupo },
+            where: { 
+                codigo_materia, 
+                nombre: nombre_grupo, 
+                periodo, 
+                anio 
+            },
             include: [{
                 model: Usuario,
-                attributes: ['id_usuario', 'nombre', 'uid_firebase', 'codigo']
-            }]
+                attributes: ['codigo', 'nombre', 'uid_firebase']
+            }],
+            attributes: ['id_grupo_usuario']
         });
 
         // Obtener la foto de cada usuario usando UsuarioService.obtenerFotoPerfil
