@@ -6,7 +6,7 @@ async function listarDocentes() {
     try {
         const docentes = await Usuario.findAll({
             where: { id_rol: '2' },
-            attributes: ['id_usuario', 'nombre', 'correo']
+            attributes: ['codigo', 'nombre', 'correo']
         });
         return docentes;
     } catch (error) {
