@@ -4,12 +4,12 @@ async function crearGrupo(req, res) {
 
     try {
         const grupo = await GrupoService.crearGrupo(
-            req.body.nombre,
-            req.body.clave_acceso,
             req.body.codigo_materia,
-            req.body.id_docente,
+            req.body.nombre,
             req.body.periodo,
-            req.body.anio
+            req.body.anio,
+            req.body.clave_acceso,
+            req.body.codigo_docente
         );
         res.status(201).json(grupo);
     }
@@ -24,9 +24,8 @@ async function crearGrupo(req, res) {
 
 async function actualizarEstado(req, res) {
     try {
-        const { id_grupo } = req.params;
-        const { nuevoEstado } = req.body; 
-        const grupoActualizado = await GrupoService.actualizarEstado(id_grupo, nuevoEstado);
+        const { codigo_materia, nombre, periodo, anio, nuevoEstado } = req.body;
+        const grupoActualizado = await GrupoService.actualizarEstado(codigo_materia, nombre, periodo, anio, nuevoEstado);
         res.status(200).json(grupoActualizado);
     } catch (error) {
         res.status(error.statusCode || 500).json({
@@ -47,8 +46,8 @@ function generarClaveAcceso(req, res) {
 
 async function generarCodigoQR(req, res) {
     try {
-        const { id_grupo } = req.params;
-        const resultado = await GrupoService.generarCodigoQR(id_grupo);
+        const { codigo_materia, nombre, periodo, anio } = req.params;
+        const resultado = await GrupoService.generarCodigoQR(codigo_materia, nombre, periodo, anio);
         res.status(200).json(resultado);
     } catch (error) {
         res.status(error.statusCode || 500).json({
@@ -59,8 +58,8 @@ async function generarCodigoQR(req, res) {
 
 async function obtenerClaveYCodigoQR(req, res) {
     try {
-        const { id_grupo } = req.params;
-        const resultado = await GrupoService.obtenerClaveYCodigoQR(id_grupo);
+        const { codigo_materia, nombre, periodo, anio } = req.body;
+        const resultado = await GrupoService.obtenerClaveYCodigoQR(codigo_materia, nombre, periodo, anio);
         res.status(200).json(resultado);
     } catch (error) {
         res.status(error.statusCode || 500).json({
@@ -71,8 +70,8 @@ async function obtenerClaveYCodigoQR(req, res) {
 
 async function listarGruposPorMateria(req, res) {
     try {
-        const { id_materia } = req.params;
-        const grupos = await GrupoService.listarGruposPorMateria(id_materia);
+        const { codigo_materia } = req.params;
+        const grupos = await GrupoService.listarGruposPorMateria(codigo_materia);
         res.status(200).json(grupos);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -83,8 +82,8 @@ async function listarGruposPorMateria(req, res) {
 
 async function listarGruposHabilitadosPorMateria(req, res) {
     try {
-        const { id_materia } = req.params;
-        const grupos = await GrupoService.listarGruposHabilitadosPorMateria(id_materia);
+        const { codigo_materia } = req.params;
+        const grupos = await GrupoService.listarGruposHabilitadosPorMateria(codigo_materia);
         res.status(200).json(grupos);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -93,8 +92,8 @@ async function listarGruposHabilitadosPorMateria(req, res) {
 
 async function listarGruposPorUsuario(req, res) {
     try {
-        const { id_usuario } = req.params;
-        const grupos = await GrupoService.listarGruposPorUsuario(id_usuario);
+        const { codigo_usuario } = req.params;
+        const grupos = await GrupoService.listarGruposPorUsuario(codigo_usuario);
         res.status(200).json(grupos);
     } catch (error) {
         res.status(500).json({ message: error.message });
