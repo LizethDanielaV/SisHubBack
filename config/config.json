@@ -1,0 +1,10 @@
+{
+  "development": {
+    "username": "root",
+    "password": "hkDuTKDvcqMWlOioKCuMIzlZoWWuZDvE",
+    "database": "railway",
+    "host": "yamabiko.proxy.rlwy.net",
+    "port": 24781,
+    "dialect": "mysql"
+  }
+}

@@ -17,9 +17,9 @@ router.get("/me", verificarToken, obtenerUsuarioPorUid);
 
 router.get("/todos", verificarToken, verificarRol([1]),obtenerTodosLosUsuarios);
 router.get("/stand-by", verificarToken, verificarRol([1]), obtenerUsuariosStandBy);
-router.patch("/:id_usuario/estado", verificarToken, verificarRol([1]), cambiarEstadoUsuario);
-router.patch("/:id_usuario/aprobar", verificarToken, verificarRol([1]), aprobarPostulacion);
-router.patch("/:id_usuario/rechazar", verificarToken, verificarRol([1]), rechazarPostulacion);
+router.patch("/:codigo/estado", verificarToken, verificarRol([1]), cambiarEstadoUsuario);
+router.patch("/:codigo/aprobar", verificarToken, verificarRol([1]), aprobarPostulacion);
+router.patch("/:codigo/rechazar", verificarToken, verificarRol([1]), rechazarPostulacion);
 router.get("/docentes", listarDocentes);
 
 export default router;

@@ -121,14 +121,14 @@ export const obtenerTodosLosUsuarios = async (req, res) => {
         }
       ],
       attributes: [
-        "id_usuario",
+        "codigo",
         "nombre",
         "documento",
         "correo",
         "telefono",
         "uid_firebase"
       ],
-      order: [["id_usuario", "DESC"]]
+      order: [["codigo", "DESC"]]
     });
 
     return res.json({
@@ -159,14 +159,14 @@ export const obtenerUsuariosStandBy = async (req, res) => {
         }
       ],
       attributes: [
-        "id_usuario",
+        "codigo",
         "nombre",
         "documento",
         "correo",
         "telefono",
         "uid_firebase"
       ],
-      order: [["id_usuario", "DESC"]]
+      order: [["codigo", "DESC"]]
     });
 
     return res.json({
@@ -182,10 +182,10 @@ export const obtenerUsuariosStandBy = async (req, res) => {
 
 export const cambiarEstadoUsuario = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { codigo } = req.params;
     const { habilitar } = req.body;
 
-    const usuario = await Usuario.findByPk(id_usuario, {
+    const usuario = await Usuario.findByPk(codigo, {
       include: [
         { model: Rol, attributes: ["descripcion"] },
         { model: Estado, attributes: ["descripcion"] }
@@ -234,9 +234,9 @@ export const cambiarEstadoUsuario = async (req, res) => {
 
 export const aprobarPostulacion = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { codigo } = req.params;
 
-    const usuario = await Usuario.findByPk(id_usuario, {
+    const usuario = await Usuario.findByPk(codigo, {
       include: [
         { model: Rol, attributes: ["descripcion"] },
         { model: Estado, attributes: ["descripcion"] }
@@ -302,9 +302,9 @@ export const aprobarPostulacion = async (req, res) => {
 
 export const rechazarPostulacion = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { codigo } = req.params;
 
-    const usuario = await Usuario.findByPk(id_usuario, {
+    const usuario = await Usuario.findByPk(codigo, {
       include: [
         { model: Estado, attributes: ["descripcion"] }
       ]
