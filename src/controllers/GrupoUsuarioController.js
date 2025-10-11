@@ -18,7 +18,7 @@ async function unirseAGrupoPorIdYClave(req, res) {
 }
 
 async function listarParticipantesGrupo(req, res) {
-    const { codigo_materia, nombre_grupo, periodo, anio } = req.body;
+    const { codigo_materia, nombre_grupo, periodo, anio } = req.query;
     try {
         const resultado = await GrupoUsuarioService.listarParticipantesGrupo(
             codigo_materia,
@@ -26,7 +26,7 @@ async function listarParticipantesGrupo(req, res) {
             periodo,
             anio
         );
-        res.status(201).json(resultado);
+        res.status(200).json(resultado);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
