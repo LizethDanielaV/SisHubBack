@@ -21,6 +21,28 @@ async function crearGrupo(req, res) {
 
 }
 
+async function cargarGruposDesdeCSV(req, res) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "Debe adjuntar un archivo CSV." });
+        }
+
+        const filePath = req.file.path;
+        const resultado = await GrupoService.cargarGruposDesdeCSV(filePath);
+
+        res.status(200).json({
+            message: "Procesamiento completado",
+            resultado
+        });
+    } catch (error) {
+        console.error("Error al cargar los grupos desde CSV:", error);
+        return res
+            .status(500)
+            .json({ message: "Error al procesar el archivo CSV.", error: error.message });
+    }
+}
+
+
 
 async function actualizarEstado(req, res) {
     try {
@@ -126,5 +148,5 @@ async function filtrarGrupos(req, res) {
 
 export default {
     crearGrupo, actualizarEstado, generarClaveAcceso, generarCodigoQR, obtenerClaveYCodigoQR,
-    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos, filtrarGrupos
+    listarGruposPorMateria, listarGruposHabilitadosPorMateria, listarGruposPorUsuario, listarTodosLosGrupos, filtrarGrupos, cargarGruposDesdeCSV
 };
