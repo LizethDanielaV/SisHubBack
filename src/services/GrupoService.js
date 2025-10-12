@@ -9,12 +9,21 @@ import db from "../db/db.js";
 import fs from "fs";
 import csv from "csv-parser";
 
-async function crearGrupo(codigo_materia, nombre, periodo, anio, clave_acceso, codigo_docente) {
+async function crearGrupo(
+  codigo_materia,
+  nombre,
+  periodo,
+  anio,
+  clave_acceso,
+  codigo_docente
+) {
   if (!nombre || !codigo_materia || !codigo_docente || !periodo || !anio) {
     throw new Error("Datos incompletos");
   }
 
-  const grupoExistente = await Grupo.findOne({ where: { codigo_materia, nombre, periodo, anio } });
+  const grupoExistente = await Grupo.findOne({
+    where: { codigo_materia, nombre, periodo, anio },
+  });
   if (grupoExistente) {
     throw new Error("Ya existe un grupo con ese nombre");
   }
@@ -35,7 +44,7 @@ async function crearGrupo(codigo_materia, nombre, periodo, anio, clave_acceso, c
       codigo_materia: codigo_materia,
       nombre: nombre,
       periodo: periodo,
-      anio: anio
+      anio: anio,
     });
 
     return nuevoGrupo;
@@ -43,7 +52,6 @@ async function crearGrupo(codigo_materia, nombre, periodo, anio, clave_acceso, c
     throw new Error("Error al crear el grupo: " + error.message);
   }
 }
-
 
 async function cargarGruposDesdeCSV(filePath) {
   try {
@@ -54,7 +62,7 @@ async function cargarGruposDesdeCSV(filePath) {
     const registros = await new Promise((resolve, reject) => {
       const data = [];
       fs.createReadStream(filePath)
-        .pipe(csv({ separator: ';' }))
+        .pipe(csv({ separator: ";" }))
         .on("data", (row) => data.push(row))
         .on("end", () => resolve(data))
         .on("error", (err) => reject(err));
@@ -63,7 +71,13 @@ async function cargarGruposDesdeCSV(filePath) {
     // Normalizar filas y eliminar duplicados dentro del CSV
     const filasUnicasMap = new Map();
     for (const fila of registros) {
-      let key = `${String(fila.codigo_materia).trim()}-${String(fila.nombre_grupo).trim().toUpperCase()}-${String(fila.periodo).trim()}-${fila.anio?.trim()}-${String(fila.codigo_docente).trim()}`;
+      let key = `${String(fila.codigo_materia).trim()}-${String(
+        fila.nombre_grupo
+      )
+        .trim()
+        .toUpperCase()}-${String(
+          fila.periodo
+        ).trim()}-${fila.anio?.trim()}-${String(fila.codigo_docente).trim()}`;
       if (!filasUnicasMap.has(key)) {
         filasUnicasMap.set(key, fila);
       }
@@ -71,39 +85,43 @@ async function cargarGruposDesdeCSV(filePath) {
     const filasUnicas = [...filasUnicasMap.values()];
 
     for (const fila of filasUnicas) {
-      let {
-        codigo_materia,
-        nombre_grupo,
-        periodo,
-        anio,
-        codigo_docente,
-      } = fila;
+      let { codigo_materia, nombre_grupo, periodo, anio, codigo_docente } =
+        fila;
 
       codigo_materia = String(codigo_materia).trim();
       nombre_grupo = String(nombre_grupo).trim().toUpperCase();
-      periodo = String(periodo).trim().padStart(2, '0');
+      periodo = String(periodo).trim().padStart(2, "0");
       codigo_docente = String(codigo_docente).trim();
       anio = parseInt(anio, 10);
 
-      if (!codigo_materia || !nombre_grupo || !periodo || isNaN(anio) || !codigo_docente) {
+      if (
+        !codigo_materia ||
+        !nombre_grupo ||
+        !periodo ||
+        isNaN(anio) ||
+        !codigo_docente
+      ) {
         errores.push(`❌ Fila incompleta: ${JSON.stringify(fila)}`);
         continue;
       }
 
       try {
         // Validar materia
-        const materia = await Materia.findOne({ where: { codigo: codigo_materia } });
+        const materia = await Materia.findOne({
+          where: { codigo: codigo_materia },
+        });
         if (!materia) {
           errores.push(`❌ Materia no encontrada: ${codigo_materia}`);
           continue;
         }
 
-
         const docente = await Usuario.findOne({
           where: { codigo: codigo_docente, id_rol: [1, 2] },
         });
         if (!docente) {
-          errores.push(`❌ Docente no encontrado o rol inválido: ${codigo_docente}`);
+          errores.push(
+            `❌ Docente no encontrado o rol inválido: ${codigo_docente}`
+          );
           continue;
         }
 
@@ -118,11 +136,20 @@ async function cargarGruposDesdeCSV(filePath) {
         });
 
         if (grupoExistente) {
-          errores.push(`⚠️ El grupo '${nombre_grupo}' de la materia '${codigo_materia}' ya existe para el periodo ${anio}-${periodo}.`);
+          errores.push(
+            `⚠️ El grupo '${nombre_grupo}' de la materia '${codigo_materia}' ya existe para el periodo ${anio}-${periodo}.`
+          );
           continue;
         }
 
-        console.log({ codigo_materia, nombre_grupo, periodo, anio, clave_acceso: generarClaveAcceso(), estado: true });
+        console.log({
+          codigo_materia,
+          nombre_grupo,
+          periodo,
+          anio,
+          clave_acceso: generarClaveAcceso(),
+          estado: true,
+        });
         // Crear grupo nuevo
         const grupo = await Grupo.create({
           codigo_materia,
@@ -143,9 +170,13 @@ async function cargarGruposDesdeCSV(filePath) {
           codigo_usuario: docente.codigo,
         });
 
-        resultados.push(`✅ Grupo '${grupo.codigo_materia}${nombre_grupo} - ${grupo.anio}${grupo.periodo}' creado correctamente.`);
+        resultados.push(
+          `✅ Grupo '${grupo.codigo_materia}${nombre_grupo} - ${grupo.anio}${grupo.periodo}' creado correctamente.`
+        );
       } catch (error) {
-        errores.push(`⚠️ Error procesando grupo '${fila.codigo_materia}${fila.nombre_grupo} - ${fila.anio}-${fila.periodo}': ${error.message}`);
+        errores.push(
+          `⚠️ Error procesando grupo '${fila.codigo_materia}${fila.nombre_grupo} - ${fila.anio}-${fila.periodo}': ${error.message}`
+        );
       }
     }
 
@@ -157,17 +188,25 @@ async function cargarGruposDesdeCSV(filePath) {
       detalles_errores: errores,
     };
   } catch (error) {
-    throw new Error("Error al cargar los grupos desde el CSV: " + error.message);
+    throw new Error(
+      "Error al cargar los grupos desde el CSV: " + error.message
+    );
   }
 }
 
-async function actualizarEstado(codigo_materia, nombre, periodo, anio, nuevoEstado) {
+async function actualizarEstado(
+  codigo_materia,
+  nombre,
+  periodo,
+  anio,
+  nuevoEstado
+) {
   if (!codigo_materia || !nombre || !periodo || !anio) {
     throw new Error("Se requieren todos los identificadores del grupo");
   }
   try {
     const grupo = await Grupo.findOne({
-      where: { codigo_materia, nombre, periodo, anio }
+      where: { codigo_materia, nombre, periodo, anio },
     });
 
     if (!grupo) {
@@ -195,7 +234,7 @@ async function generarCodigoQR(codigo_materia, nombre, periodo, anio) {
   }
   try {
     const grupo = await Grupo.findOne({
-      where: { codigo_materia, nombre, periodo, anio }
+      where: { codigo_materia, nombre, periodo, anio },
     });
     if (!grupo) {
       throw new Error("Grupo no encontrado");
@@ -208,7 +247,7 @@ async function generarCodigoQR(codigo_materia, nombre, periodo, anio) {
       nombre,
       periodo,
       anio,
-      qr
+      qr,
     };
   } catch (error) {
     throw new Error("Error al generar el codigo QR: " + error.message);
@@ -221,7 +260,7 @@ async function obtenerClaveYCodigoQR(codigo_materia, nombre, periodo, anio) {
   }
   try {
     const grupo = await Grupo.findOne({
-      where: { codigo_materia, nombre, periodo, anio }
+      where: { codigo_materia, nombre, periodo, anio },
     });
     if (!grupo) {
       throw new Error("Grupo no encontrado");
@@ -414,7 +453,6 @@ async function listarGruposPorUsuario(codigo_usuario) {
   }
 }
 
-
 async function listarTodosLosGrupos() {
   try {
     const resultado = await db.query(
@@ -504,5 +542,5 @@ export default {
   listarGruposPorUsuario,
   listarTodosLosGrupos,
   filtrarGrupos,
-  cargarGruposDesdeCSV
+  cargarGruposDesdeCSV,
 };
