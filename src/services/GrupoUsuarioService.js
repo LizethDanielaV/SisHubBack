@@ -17,6 +17,19 @@ async function usuarioYaEnGrupo(codigo_usuario, codigo_materia, nombre_grupo, pe
     return !!existe;
 }
 
+async function usuarioYaEnOtroGrupo(codigo_usuario, codigo_materia, periodo, anio) {
+    const existe = await GrupoUsuario.findOne({
+        where: { 
+            codigo_usuario, 
+            codigo_materia, 
+            periodo, 
+            anio 
+        },
+        attributes: ['id_grupo_usuario', 'codigo_materia', 'nombre', 'periodo', 'anio']
+    });
+    return !!existe;
+}
+
 async function unirseAGrupoPorIdYClave(codigo_usuario, codigo_materia, nombre_grupo, periodo, anio, clave_acceso) {
     if (!codigo_usuario || !codigo_materia || !nombre_grupo || !periodo || !anio || !clave_acceso) {
         throw new Error("Datos incompletos");
@@ -59,6 +72,12 @@ async function unirseAGrupoPorIdYClave(codigo_usuario, codigo_materia, nombre_gr
     // Verificar si el usuario ya está en el grupo usando la función aparte
     if (await usuarioYaEnGrupo(codigo_usuario, codigo_materia, nombre_grupo, periodo, anio)) {
         throw new Error("El usuario ya pertenece a este grupo");
+    }
+
+    // Verificar si el usuario ya está en otro grupo de la misma materia, periodo y año
+    const grupoExistente = await usuarioYaEnOtroGrupo(codigo_usuario, codigo_materia, periodo, anio);
+    if (grupoExistente) {
+        throw new Error(`El usuario ya pertenece a un grupo de esta materia en el mismo periodo y año`);
     }
 
     // Registrar al usuario en el grupo
