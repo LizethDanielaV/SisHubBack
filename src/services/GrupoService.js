@@ -101,7 +101,7 @@ async function cargarGruposDesdeCSV(filePath) {
         isNaN(anio) ||
         !codigo_docente
       ) {
-        errores.push(`❌ Fila incompleta: ${JSON.stringify(fila)}`);
+        errores.push(`Fila incompleta: ${JSON.stringify(fila)}`);
         continue;
       }
 
@@ -111,7 +111,7 @@ async function cargarGruposDesdeCSV(filePath) {
           where: { codigo: codigo_materia },
         });
         if (!materia) {
-          errores.push(`❌ Materia no encontrada: ${codigo_materia}`);
+          errores.push(`Materia no encontrada: ${codigo_materia}`);
           continue;
         }
 
@@ -120,7 +120,7 @@ async function cargarGruposDesdeCSV(filePath) {
         });
         if (!docente) {
           errores.push(
-            `❌ Docente no encontrado o rol inválido: ${codigo_docente}`
+            `Docente no encontrado o rol inválido: ${codigo_docente}`
           );
           continue;
         }
@@ -137,7 +137,7 @@ async function cargarGruposDesdeCSV(filePath) {
 
         if (grupoExistente) {
           errores.push(
-            `⚠️ El grupo '${nombre_grupo}' de la materia '${codigo_materia}' ya existe para el periodo ${anio}-${periodo}.`
+            `El grupo '${nombre_grupo}' de la materia '${codigo_materia}' ya existe para el periodo ${anio}-${periodo}.`
           );
           continue;
         }
@@ -171,11 +171,11 @@ async function cargarGruposDesdeCSV(filePath) {
         });
 
         resultados.push(
-          `✅ Grupo '${grupo.codigo_materia}${nombre_grupo} - ${grupo.anio}${grupo.periodo}' creado correctamente.`
+          `Grupo '${grupo.codigo_materia}${nombre_grupo} - ${grupo.anio}${grupo.periodo}' creado correctamente.`
         );
       } catch (error) {
         errores.push(
-          `⚠️ Error procesando grupo '${fila.codigo_materia}${fila.nombre_grupo} - ${fila.anio}-${fila.periodo}': ${error.message}`
+          `Error procesando grupo '${fila.codigo_materia}${fila.nombre_grupo} - ${fila.anio}-${fila.periodo}': ${error.message}`
         );
       }
     }
