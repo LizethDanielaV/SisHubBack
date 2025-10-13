@@ -163,10 +163,31 @@ async function filtrarGrupos(req, res) {
   }
 }
 
+async function actualizarClaveAcceso(req, res) {
+  try {
+    const { codigo_materia, nombre, periodo, anio, nueva_clave } = req.body;
+    
+    const resultado = await GrupoService.actualizarClaveAcceso(
+      codigo_materia,
+      nombre,
+      periodo,
+      anio,
+      nueva_clave
+    );
+    
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      message: error.message || "Error interno del servidor",
+    });
+  }
+}
+
 export default {
   crearGrupo,
   actualizarEstado,
   generarClaveAcceso,
+  actualizarClaveAcceso,
   generarCodigoQR,
   obtenerClaveYCodigoQR,
   listarGruposPorMateria,

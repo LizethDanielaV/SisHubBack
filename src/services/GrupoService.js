@@ -531,11 +531,51 @@ async function filtrarGrupos({
   }
 }
 
+async function actualizarClaveAcceso(
+  codigo_materia,
+  nombre,
+  periodo,
+  anio,
+  nueva_clave
+) {
+  if (!codigo_materia || !nombre || !periodo || !anio || !nueva_clave) {
+    throw new Error("Todos los datos son requeridos");
+  }
+
+  try {
+    const grupo = await Grupo.findOne({
+      where: { codigo_materia, nombre, periodo, anio },
+    });
+
+    if (!grupo) {
+      throw new Error("Grupo no encontrado");
+    }
+
+    // Actualizar la clave de acceso
+    grupo.clave_acceso = nueva_clave;
+    await grupo.save();
+
+    return {
+      message: "Clave de acceso actualizada correctamente",
+      grupo: {
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio,
+        clave_acceso: grupo.clave_acceso,
+      },
+    };
+  } catch (error) {
+    throw new Error("Error al actualizar la clave de acceso: " + error.message);
+  }
+}
+
 export default {
   crearGrupo,
   actualizarEstado,
   generarClaveAcceso,
   generarCodigoQR,
+  actualizarClaveAcceso,
   obtenerClaveYCodigoQR,
   listarGruposPorMateria,
   listarGruposHabilitadosPorMateria,
