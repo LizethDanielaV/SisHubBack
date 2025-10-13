@@ -57,7 +57,10 @@ export async function buscarPorId(req, res) {
 
 async function listarCodigos(req, res) {
   try {
-    const materias = await MateriaService.listarCodigos();
+    const { semestre } = req.query;
+    const semestreNum = semestre ? parseInt(semestre) : null;
+    
+    const materias = await MateriaService.listarCodigos(semestreNum);
     res.json(materias);
   } catch (error) {
     res

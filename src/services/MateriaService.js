@@ -2,6 +2,7 @@ import Materia from "../models/Materia.js";
 import Area from "../models/Area.js";
 import fs from "fs";
 import csv from "csv-parser";
+import Sequelize from "sequelize";
 
 async function crear(codigo, nombre,semestre, creditos, prerrequisitos, tipo, idArea) {
 
@@ -86,16 +87,33 @@ async function buscarPorId(idMateria) {
   }
 }
 
-async function listarCodigos() {
+async function listarCodigos(semestre = null) {
   try {
+    let whereClause = {};
+    
+    // Si se proporciona un semestre, filtrar materias de semestres anteriores
+    // IMPORTANTE: Usar CAST porque semestre es STRING en la BD
+    if (semestre !== null && semestre !== undefined) {
+      whereClause = Sequelize.literal(
+        `CAST(semestre AS UNSIGNED) < ${parseInt(semestre)}`
+      );
+    }
+    
     const materias = await Materia.findAll({
-      attributes: ['codigo', 'nombre'] 
+      where: whereClause,
+      attributes: ['codigo', 'nombre', 'semestre'],
+      order: [
+        [Sequelize.literal('CAST(semestre AS UNSIGNED)'), 'ASC'],
+        ['codigo', 'ASC']
+      ]
     });
+    
     return materias;
   } catch (error) {
     throw new Error("Error al obtener las materias " + error.message);
   }
 }
+
 
 function validarSemestre(semestre){
   const semestreN = Number(semestre);
