@@ -24,10 +24,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.post("/", verificarToken, verificarRol([1]), GrupoController.crearGrupo);
-router.patch("/actualizar-estado", verificarToken, verificarRol([1]), GrupoController.actualizarEstado);
-router.get("/generar-clave", verificarToken, verificarRol([1]), GrupoController.generarClaveAcceso);
-router.get("/:codigo_materia/:nombre/:periodo/:anio/generar-qr", verificarToken, verificarRol([1]), GrupoController.generarCodigoQR);
-router.post("/clave-y-qr", verificarToken, verificarRol([1]), GrupoController.obtenerClaveYCodigoQR);
+router.patch("/actualizar-estado", verificarToken, verificarRol([1, 2]), GrupoController.actualizarEstado);
+router.get("/generar-clave", verificarToken, verificarRol([1, 2]), GrupoController.generarClaveAcceso);
+router.get("/:codigo_materia/:nombre/:periodo/:anio/generar-qr", verificarToken, verificarRol([1, 2]), GrupoController.generarCodigoQR);
+router.post("/clave-y-qr", verificarToken, verificarRol([1, 2]), GrupoController.obtenerClaveYCodigoQR);
 router.patch("/actualizar-clave", verificarToken, verificarRol([1, 2]), GrupoController.actualizarClaveAcceso);
 router.get("/materia/:codigo_materia", verificarToken, verificarRol([1, 2, 3]), GrupoController.listarGruposPorMateria);
 router.get("/materia/:codigo_materia/habilitados", verificarToken, verificarRol([1, 2, 3]), GrupoController.listarGruposHabilitadosPorMateria);
