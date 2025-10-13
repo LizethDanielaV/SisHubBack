@@ -28,7 +28,7 @@ router.patch("/actualizar-estado", verificarToken, verificarRol([1]), GrupoContr
 router.get("/generar-clave", verificarToken, verificarRol([1]), GrupoController.generarClaveAcceso);
 router.get("/:codigo_materia/:nombre/:periodo/:anio/generar-qr", verificarToken, verificarRol([1]), GrupoController.generarCodigoQR);
 router.post("/clave-y-qr", verificarToken, verificarRol([1]), GrupoController.obtenerClaveYCodigoQR);
-router.patch("/actualizar-clave", verificarToken, verificarRol([1]), GrupoController.actualizarClaveAcceso);
+router.patch("/actualizar-clave", verificarToken, verificarRol([1, 2]), GrupoController.actualizarClaveAcceso);
 router.get("/materia/:codigo_materia", verificarToken, verificarRol([1, 2, 3]), GrupoController.listarGruposPorMateria);
 router.get("/materia/:codigo_materia/habilitados", verificarToken, verificarRol([1, 2, 3]), GrupoController.listarGruposHabilitadosPorMateria);
 router.get("/usuario/:codigo_usuario", verificarToken, verificarRol([1, 2, 3]), GrupoController.listarGruposPorUsuario);
