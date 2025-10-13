@@ -7,8 +7,8 @@ import multer from "multer";
 const router = Router();
 const upload = multer({ dest: "uploads/" });
 
-router.post("/crear/upload-csv", /*verificarToken, verificarRol([1]), */upload.single("archivo"), MateriaController.subirCSV);
-router.post("/", /*verificarToken, verificarRol([1]),*/ MateriaController.crear);
+router.post("/crear/upload-csv", verificarToken, verificarRol([1]), upload.single("archivo"), MateriaController.subirCSV);
+router.post("/", verificarToken, verificarRol([1]), MateriaController.crear);
 router.get("/codigos", verificarToken, verificarRol([1, 2, 3]), MateriaController.listarCodigos);
 router.put("/:id_materia", verificarToken, verificarRol([1]), MateriaController.actualizar);
 router.get("/", verificarToken, verificarRol([1, 2, 3]),  MateriaController.listar);
