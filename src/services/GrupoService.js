@@ -63,7 +63,14 @@ async function cargarGruposDesdeCSV(filePath) {
       const data = [];
       fs.createReadStream(filePath)
         .pipe(csv({ separator: ";" }))
-        .on("data", (row) => data.push(row))
+        .on("data", (row) => {
+          const cleanedRow = {};
+          for (const key in row) {
+            const cleanKey = key.replace(/\uFEFF/g, "").trim(); // limpia BOM y espacios
+            cleanedRow[cleanKey] = row[key]?.trim?.();
+          }
+          data.push(cleanedRow);
+        })
         .on("end", () => resolve(data))
         .on("error", (err) => reject(err));
     });
@@ -76,8 +83,8 @@ async function cargarGruposDesdeCSV(filePath) {
       )
         .trim()
         .toUpperCase()}-${String(
-          fila.periodo
-        ).trim()}-${fila.anio?.trim()}-${String(fila.codigo_docente).trim()}`;
+        fila.periodo
+      ).trim()}-${fila.anio?.trim()}-${String(fila.codigo_docente).trim()}`;
       if (!filasUnicasMap.has(key)) {
         filasUnicasMap.set(key, fila);
       }
@@ -171,11 +178,11 @@ async function cargarGruposDesdeCSV(filePath) {
         });
 
         resultados.push(
-          `Grupo '${grupo.codigo_materia}${nombre_grupo} - ${grupo.anio}${grupo.periodo}' creado correctamente.`
+          `Grupo '${grupo.codigo_materia}-${nombre_grupo}-${grupo.periodo}-${grupo.anio}' creado correctamente.`
         );
       } catch (error) {
         errores.push(
-          `Error procesando grupo '${fila.codigo_materia}${fila.nombre_grupo} - ${fila.anio}-${fila.periodo}': ${error.message}`
+          `Error procesando grupo '${fila.codigo_materia}-${fila.nombre_grupo} - ${fila.periodo}-${fila.anio}': ${error.message}`
         );
       }
     }
