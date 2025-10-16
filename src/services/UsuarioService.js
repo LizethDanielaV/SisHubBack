@@ -26,6 +26,7 @@ async function cargarDocentesMasivamente(docentes) {
 
   for (const docente of docentes) {
     let userRecord = null;
+    let firebaseUserCreated = false; // ✅ Flag para saber si creamos el usuario
 
     try {
       // 1. Verificar si ya existe en la BD
@@ -44,52 +45,65 @@ async function cargarDocentesMasivamente(docentes) {
           docente,
           error: `Ya existe un usuario con el código, documento o correo`
         });
-        continue;
+        continue; // ✅ Saltar al siguiente docente
       }
 
-      // 2. Crear usuario en Firebase
+      // 2. Verificar si el correo ya existe en Firebase
+      try {
+        const existingFirebaseUser = await admin.auth().getUserByEmail(docente.correo);
+        
+        // Si llegamos aquí, el usuario existe en Firebase
+        // Verificar si está en nuestra BD
+        const usuarioConUid = await Usuario.findOne({
+          where: { uid_firebase: existingFirebaseUser.uid }
+        });
+
+        if (usuarioConUid) {
+          // Usuario existe en ambos sistemas
+          resultados.errores.push({
+            docente,
+            error: `El correo ${docente.correo} ya está registrado en el sistema`
+          });
+        } else {
+          // Usuario huérfano en Firebase (existe en Firebase pero no en BD)
+          resultados.errores.push({
+            docente,
+            error: `El correo ${docente.correo} ya existe en Firebase pero no en la base de datos. Contacte al administrador.`
+          });
+        }
+        continue; // ✅ Saltar al siguiente docente
+        
+      } catch (getUserError) {
+        // Si el error es 'user-not-found', está bien, podemos crear el usuario
+        if (getUserError.code !== 'auth/user-not-found') {
+          // Error real de Firebase
+          resultados.errores.push({
+            docente,
+            error: `Error al verificar correo en Firebase: ${getUserError.message}`
+          });
+          continue; // ✅ Saltar al siguiente docente
+        }
+        // Si es 'auth/user-not-found', continuamos con la creación
+      }
+
+      // 3. Crear usuario en Firebase (solo si no existe)
       try {
         userRecord = await admin.auth().createUser({
           email: docente.correo,
-          emailVerified: true, // Los admin lo cargan ya verificado
+          emailVerified: true,
           displayName: docente.nombre,
           disabled: false
         });
+        firebaseUserCreated = true; // ✅ Marcamos que creamos el usuario
       } catch (firebaseError) {
-        if (firebaseError.code === 'auth/email-already-exists') {
-          // Intentar obtener el usuario existente
-          try {
-            userRecord = await admin.auth().getUserByEmail(docente.correo);
-
-            // Verificar si ya está en nuestra BD
-            const usuarioConUid = await Usuario.findOne({
-              where: { uid_firebase: userRecord.uid }
-            });
-
-            if (usuarioConUid) {
-              resultados.errores.push({
-                docente,
-                error: `El correo ${docente.correo} ya está registrado en el sistema`
-              });
-              continue;
-            }
-          } catch (getUserError) {
-            resultados.errores.push({
-              docente,
-              error: `Error al verificar correo en Firebase: ${getUserError.message}`
-            });
-            continue;
-          }
-        } else {
-          resultados.errores.push({
-            docente,
-            error: `Error en Firebase: ${firebaseError.message}`
-          });
-          continue;
-        }
+        resultados.errores.push({
+          docente,
+          error: `Error al crear usuario en Firebase: ${firebaseError.message}`
+        });
+        continue; // ✅ Saltar al siguiente docente
       }
 
-      // 3. Crear usuario en la BD
+      // 4. Crear usuario en la BD
       const nuevoUsuario = await Usuario.create({
         codigo: docente.codigo,
         nombre: docente.nombre,
@@ -98,20 +112,21 @@ async function cargarDocentesMasivamente(docentes) {
         telefono: docente.telefono || null,
         uid_firebase: userRecord.uid,
         id_rol: rolDocente.id_rol,
-        id_estado: estadoHabilitado.id_estado // HABILITADO directo
+        id_estado: estadoHabilitado.id_estado
       });
 
-      // 4. Establecer custom claims en Firebase
+      // 5. Establecer custom claims en Firebase
       await admin.auth().setCustomUserClaims(userRecord.uid, {
         role: "DOCENTE",
         id_rol: rolDocente.id_rol,
         estado: "HABILITADO"
       });
 
-      // 5. Enviar enlace para establecer contraseña (opcional)
+      // 6. (Opcional) Enviar enlace para establecer contraseña
       // await admin.auth().generatePasswordResetLink(docente.correo);
       // Aquí podrías enviar un email con el link
 
+      // ✅ Éxito total
       resultados.exitosos.push({
         codigo: nuevoUsuario.codigo,
         nombre: nuevoUsuario.nombre,
@@ -120,10 +135,11 @@ async function cargarDocentesMasivamente(docentes) {
       });
 
     } catch (error) {
-      // Si algo falla, limpiar Firebase
-      if (userRecord?.uid) {
+      // ✅ Si algo falla, limpiar Firebase SOLO si nosotros lo creamos
+      if (firebaseUserCreated && userRecord?.uid) {
         try {
           await admin.auth().deleteUser(userRecord.uid);
+          console.log(`Usuario de Firebase ${userRecord.uid} eliminado por error en BD`);
         } catch (cleanupError) {
           console.error("Error al limpiar Firebase:", cleanupError);
         }

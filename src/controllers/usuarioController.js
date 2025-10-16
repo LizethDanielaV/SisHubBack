@@ -361,6 +361,7 @@ export const cargarDocentesMasivamente = async (req, res) => {
     // Validar que venga el array de docentes
     if (!docentes || !Array.isArray(docentes) || docentes.length === 0) {
       return res.status(400).json({
+        ok: false,
         error: "Debe enviar un array de docentes"
       });
     }
@@ -372,6 +373,7 @@ export const cargarDocentesMasivamente = async (req, res) => {
 
     if (!docentesValidos) {
       return res.status(400).json({
+        ok: false,
         error: "Todos los docentes deben tener código, nombre, documento y correo"
       });
     }
@@ -379,14 +381,9 @@ export const cargarDocentesMasivamente = async (req, res) => {
     // Procesar la carga masiva
     const resultados = await UsuarioService.cargarDocentesMasivamente(docentes);
 
-    // Determinar el código de respuesta
-    const statusCode = resultados.errores.length === 0 
-      ? 200 
-      : resultados.exitosos.length === 0 
-        ? 400 
-        : 207; // Multi-Status
-
-    return res.status(statusCode).json({
+    // ✅ SIEMPRE retorna 200 cuando el proceso se completa
+    // (aunque haya errores individuales en algunos docentes)
+    return res.status(200).json({
       ok: true,
       mensaje: `Proceso completado. ${resultados.exitosos.length} docente(s) cargado(s), ${resultados.errores.length} error(es)`,
       exitosos: resultados.exitosos,
@@ -399,6 +396,7 @@ export const cargarDocentesMasivamente = async (req, res) => {
   } catch (error) {
     console.error("Error en carga masiva de docentes:", error);
     return res.status(500).json({
+      ok: false,
       error: "Error al procesar la carga masiva de docentes",
       detalle: error.message
     });
