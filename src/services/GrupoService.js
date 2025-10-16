@@ -62,7 +62,7 @@ async function cargarGruposDesdeCSV(filePath) {
     const registros = await new Promise((resolve, reject) => {
       const data = [];
       fs.createReadStream(filePath)
-        .pipe(csv({ separator: ";" }))
+        .pipe(csv())
         .on("data", (row) => {
           const cleanedRow = {};
           for (const key in row) {
