@@ -3,6 +3,7 @@ import Usuario from "../models/Usuario.js";
 import admin from "../firebaseAdmin.js";
 import Estado from "../models/Estado.js";
 import UsuarioService from "../services/UsuarioService.js";
+import { progressService } from "../services/progressService.js";
 
 export const registrarUsuario = async (req, res) => {
   try {
@@ -376,24 +377,32 @@ export const cargarDocentesMasivamente = async (req, res) => {
       });
     }
 
-    // Procesar la carga masiva
-    const resultados = await UsuarioService.cargarDocentesMasivamente(docentes);
+    // Generar ID único para el progreso
+    const progressId = `progress_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Determinar el código de respuesta
-    const statusCode = resultados.errores.length === 0
-      ? 200
-      : resultados.exitosos.length === 0
-        ? 400
-        : 207; // Multi-Status
+    // Crear progreso inicial
+    progressService.createProgress(progressId, docentes.length);
 
-    return res.status(statusCode).json({
+    console.log(`🚀 Iniciando carga masiva de docentes - Progress ID: ${progressId}`);
+    console.log(`📊 Total de docentes: ${docentes.length}`);
+
+    // Iniciar proceso en background (no bloqueante)
+    setImmediate(async () => {
+      try {
+        await UsuarioService.cargarDocentesMasivamente(docentes, progressId);
+        console.log(`✅ Carga completada - Progress ID: ${progressId}`);
+      } catch (error) {
+        console.error(`❌ Error en proceso de carga - Progress ID: ${progressId}`, error);
+        progressService.failProgress(progressId, `Error: ${error.message}`);
+      }
+    });
+
+    // Responder inmediatamente con el ID de progreso (202 Accepted)
+    return res.status(202).json({
       ok: true,
-      mensaje: `Proceso completado. ${resultados.exitosos.length} docente(s) cargado(s), ${resultados.errores.length} error(es)`,
-      exitosos: resultados.exitosos,
-      errores: resultados.errores,
-      total: docentes.length,
-      totalExitosos: resultados.exitosos.length,
-      totalErrores: resultados.errores.length
+      mensaje: "Proceso de carga de docentes iniciado",
+      progressId: progressId,
+      totalDocentes: docentes.length
     });
 
   } catch (error) {
