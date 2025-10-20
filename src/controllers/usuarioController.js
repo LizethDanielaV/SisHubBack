@@ -91,7 +91,7 @@ export const obtenerUsuarioPorUid = async (req, res) => {
     });
 
     if (!usuario) {
-      return res.status(404).json({ error: "Usuario no encontrado" });
+      return res.status(200).json({ ok: false, message: "Usuario no encontrado" });
     }
 
     return res.json({ ok: true, usuario });
@@ -366,7 +366,7 @@ export const cargarDocentesMasivamente = async (req, res) => {
     }
 
     // Validar estructura de cada docente
-    const docentesValidos = docentes.every(d => 
+    const docentesValidos = docentes.every(d =>
       d.codigo && d.nombre && d.documento && d.correo
     );
 
@@ -380,10 +380,10 @@ export const cargarDocentesMasivamente = async (req, res) => {
     const resultados = await UsuarioService.cargarDocentesMasivamente(docentes);
 
     // Determinar el código de respuesta
-    const statusCode = resultados.errores.length === 0 
-      ? 200 
-      : resultados.exitosos.length === 0 
-        ? 400 
+    const statusCode = resultados.errores.length === 0
+      ? 200
+      : resultados.exitosos.length === 0
+        ? 400
         : 207; // Multi-Status
 
     return res.status(statusCode).json({
