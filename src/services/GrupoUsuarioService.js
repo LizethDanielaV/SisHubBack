@@ -549,7 +549,7 @@ async function matricularEstudiantesMasivamente(matriculas, progressId = null) {
                         periodo: matricula.periodo,
                         anio: matricula.anio,
                         fecha_ingreso: new Date(),
-                        estado: true,
+                        estado: false,
                         nombre_estudiante: estudiante.nombre
                     });
                 }
