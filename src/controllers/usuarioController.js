@@ -414,3 +414,40 @@ export const listarDocentes = async (req, res) => {
     return res.status(500).json({ error: "Error al listar docentes" });
   }
 };
+
+
+export const listarEstudiantes = async (req, res) => {
+  try {
+    const estudiantes = await UsuarioService.listarEstudiantes();
+    return res.json({ estudiantes });
+  } catch (error) {
+    console.error("Error al listar estudiantes:", error);
+    return res.status(500).json({ error: "Error al listar estudiantes" });
+  }
+};
+
+export const buscarEstudiantePorCodigo = async (req, res) => {
+  try {
+    const { codigo } = req.params;
+
+    if (!codigo) {
+      return res.status(400).json({ error: "Debe proporcionar un código de estudiante" });
+    }
+
+    const estudiante = await UsuarioService.buscarEstudiantePorCodigo(codigo);
+
+    if (!estudiante) {
+      return res.status(404).json({ error: "Estudiante no registrado. Digite sus datos" });
+    }
+
+    return res.json({
+      ok: true,
+      estudiante
+    });
+  } catch (error) {
+    console.error("Error al buscar estudiante por código:", error);
+    return res.status(500).json({ error: "Error al buscar estudiante por código" });
+  }
+};
+
+

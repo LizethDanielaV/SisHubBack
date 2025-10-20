@@ -151,6 +151,46 @@ async function listarDocentes() {
     }
 }
 
+async function listarEstudiantes() {
+    try {
+        const docentes = await Usuario.findAll({
+            where: { id_rol: '3' },
+            attributes: ['codigo', 'nombre', 'correo']
+        });
+        return docentes;
+    } catch (error) {
+        throw new Error("Error al listar docentes: " + error.message);
+    }
+}
+
+async function buscarEstudiantePorCodigo(codigo) {
+  try {
+    const estudiante = await Usuario.findOne({
+      where: { codigo },
+      include: [
+        {
+          model: Rol,
+          attributes: ["descripcion"],
+          where: { descripcion: "ESTUDIANTE" }
+        },
+        {
+          model: Estado,
+          attributes: ["descripcion"]
+        }
+      ],
+      attributes: ["codigo", "nombre", "documento", "correo", "telefono"]
+    });
+
+    if (!estudiante) {
+      return null;
+    }
+
+    return estudiante;
+  } catch (error) {
+    throw new Error("Error al buscar estudiante por código: " + error.message);
+  }
+}
+
 async function obtenerFotoPerfil(uid_firebase) {
     try {
         const userRecord = await admin.auth().getUser(uid_firebase);
@@ -167,4 +207,4 @@ async function obtenerFotoPerfil(uid_firebase) {
     }
 }
 
-export default { listarDocentes, obtenerFotoPerfil, cargarDocentesMasivamente };
+export default { buscarEstudiantePorCodigo, listarEstudiantes, listarDocentes, obtenerFotoPerfil, cargarDocentesMasivamente };

@@ -11,6 +11,7 @@ import areaRoutes from "./routes/areas.js";
 import materiasRoutes from "./routes/materias.js"
 import grupoRoutes from "./routes/grupos.js";
 import gruposUsuariosRoutes from "./routes/gruposUsuarios.js";
+import progress from "./routes/progress.js";
 
 dotenv.config(); 
 
@@ -48,6 +49,7 @@ testConnection();
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/materias", materiasRoutes);
+app.use("/api/progress", progress);
 app.use("/api/grupos", grupoRoutes);
 app.use("/api/grupos-usuarios", gruposUsuariosRoutes);
 
