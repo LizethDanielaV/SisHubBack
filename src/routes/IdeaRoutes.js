@@ -5,6 +5,8 @@ import { verificarRol } from "../middlewares/roles.js";
 
 const router = Router();
 
+router.put("/:id_idea/revisar", verificarToken, verificarRol([2]), IdeaController.revisarIdea);
+
 router.post("/crear", IdeaController.crearIdea);
 
 router.put("/actualizar/:id", IdeaController.actualizarIdea);
