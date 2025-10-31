@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
-
 import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
 // Importar rutas
