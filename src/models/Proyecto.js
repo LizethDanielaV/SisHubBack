@@ -2,7 +2,7 @@ import db from "../db/db.js";
 import { DataTypes } from "sequelize";
 import Idea from "./Idea.js";
 import Actividad from "./Actividad.js";
-import TipoAlcance from "./TipoAlcance.js";
+// import TipoAlcance from "./TipoAlcance.js";
 
 const Proyecto = db.define("proyecto", {
     id_proyecto: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -27,11 +27,11 @@ Proyecto.belongsTo(Idea, {
 
 // RElacion con tipo de alcance
 
-TipoAlcance.hasMany(Proyecto, {
-    foreignKey: "id_tipo_alcance"
-});
-Proyecto.belongsTo(TipoAlcance, {
-    foreignKey: "id_tipo_alcance"
-});
+// TipoAlcance.hasMany(Proyecto, {
+//     foreignKey: "id_tipo_alcance"
+// });
+// Proyecto.belongsTo(TipoAlcance, {
+//     foreignKey: "id_tipo_alcance"
+// });
 export default Proyecto;
 
