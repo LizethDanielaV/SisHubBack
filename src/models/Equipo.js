@@ -11,14 +11,6 @@ const Equipo = db.define("equipo", {
     freezeTableName: true
 });
 
-//Relacion con proyecto
-Proyecto.hasMany(Equipo, {
-    foreignKey: "id_proyecto"
-});
-Equipo.belongsTo(Proyecto, {
-    foreignKey: "id_proyecto"
-});
-
 //relacion con estudiante
 Usuario.hasMany(Equipo, {
     foreignKey: "codigo_usuario_estudiante"
