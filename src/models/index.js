@@ -25,4 +25,9 @@ import "./Actividad.js";
 import "./Mensaje.js";
 import "./Notificacion.js";
 
+import "./TipoAlcance.js";
+import "./Esquema.js";
+import "./Item.js";
+import "./ActividadItem.js"
+
 console.log("✅ Todos los modelos cargados correctamente");
