@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
+import Item from "./models/Item.js";
 
 import db, { testConnection } from "./db/db.js";
 
@@ -43,7 +44,17 @@ app.use(express.json());
 
 // Conectar DB
 testConnection();
-
+//Crear tabla individual
+// Función para crear solo la tabla Item
+export async function createOnlyOne() {
+  try {
+    await Item.sync({ alter: true }); // Solo afecta a Item
+    console.log("Tabla Item creada exitosamente");
+  } catch (error) {
+    console.error("Error al crear tabla Item:", error.message);
+  }
+}
+createOnlyOne();
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
