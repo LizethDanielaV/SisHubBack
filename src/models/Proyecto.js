@@ -1,34 +1,37 @@
 import db from "../db/db.js";
 import { DataTypes } from "sequelize";
-import Estado from "./Estado.js";
+import Idea from "./Idea.js";
 import Actividad from "./Actividad.js";
+import TipoAlcance from "./TipoAlcance.js";
 
 const Proyecto = db.define("proyecto", {
-    id_proyecto: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    titulo: {type: DataTypes.STRING(150)},
-    descripcion: {type: DataTypes.STRING(150)},
-    objetivo_general: {type: DataTypes.STRING(150)},
-    fecha_creacion: {type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW }
+    id_proyecto: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    linea_investigacion: { type: DataTypes.STRING(150) },
+    tecnologias: { type: DataTypes.STRING(150) },
+    palabras_clave: { type: DataTypes.STRING(150) },
+    fecha_creacion: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
-     timestamps: false,
+    timestamps: false,
     freezeTableName: true
 });
 
-//relacion con estado
-Estado.hasMany(Proyecto, {
-    foreignKey: "id_estado"
+
+//relacion con Idea
+Idea.hasMany(Proyecto, {
+    foreignKey: "id_idea"
 });
-Proyecto.belongsTo(Estado, {
-    foreignKey: "id_estado"
+Proyecto.belongsTo(Idea, {
+    foreignKey: "id_idea"
 });
 
-//relacion con actividad
-Actividad.hasMany(Proyecto, {
-    foreignKey: "id_actividad"
-});
-Proyecto.belongsTo(Actividad, {
-    foreignKey: "id_actividad"
-});
 
+// RElacion con tipo de alcance
+
+TipoAlcance.hasMany(Proyecto, {
+    foreignKey: "id_tipo_alcance"
+});
+Proyecto.belongsTo(TipoAlcance, {
+    foreignKey: "id_tipo_alcance"
+});
 export default Proyecto;
 
