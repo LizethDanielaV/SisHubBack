@@ -2,8 +2,9 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
-import db, { testConnection } from "./db/db.js";
 
+import db, { testConnection, createTables } from "./db/db.js";
+import "./models/index.js";
 // Importar rutas
 import usuarioRoutes from "./routes/usuarios.js";
 import areaRoutes from "./routes/areas.js";
@@ -11,7 +12,7 @@ import materiasRoutes from "./routes/materias.js"
 import grupoRoutes from "./routes/grupos.js";
 import gruposUsuariosRoutes from "./routes/gruposUsuarios.js";
 
-dotenv.config(); 
+dotenv.config();
 
 
 const app = express();
@@ -26,7 +27,7 @@ app.use(cors({
   origin: function (origin, callback) {
     // Permitir requests sin origin (como Postman/Thunder Client)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -34,7 +35,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ["GET","PATCH","POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "PATCH", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
@@ -42,6 +43,7 @@ app.use(express.json());
 
 // Conectar DB
 testConnection();
+// createTables();
 
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);

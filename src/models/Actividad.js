@@ -1,6 +1,7 @@
 import db from "../db/db.js";
 import { DataTypes } from "sequelize";
 import Grupo from "./Grupo.js";
+import TipoAlcance from "./TipoAlcance.js";
 
 const Actividad = db.define("actividad", {
     id_actividad: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -28,6 +29,11 @@ Actividad.belongsTo(Grupo, {
 
 //Relacion con tipo_alcance
 
-
+TipoAlcance.hasMany(Actividad, {
+    foreignKey: "id_tipo_alcance"
+});
+Actividad.belongsTo(TipoAlcance, {
+    foreignKey: "id_tipo_alcance"
+});
 
 export default Actividad;

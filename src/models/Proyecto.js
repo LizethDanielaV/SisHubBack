@@ -1,7 +1,6 @@
 import db from "../db/db.js";
 import { DataTypes } from "sequelize";
 import Idea from "./Idea.js";
-import Actividad from "./Actividad.js";
 import TipoAlcance from "./TipoAlcance.js";
 
 const Proyecto = db.define("proyecto", {
@@ -25,7 +24,7 @@ Proyecto.belongsTo(Idea, {
 });
 
 
-// RElacion con tipo de alcance
+//RElacion con tipo de alcance
 
 TipoAlcance.hasMany(Proyecto, {
     foreignKey: "id_tipo_alcance"
