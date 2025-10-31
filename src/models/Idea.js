@@ -11,6 +11,11 @@ const Idea = db.define("Idea", {
   justificacion: { type: DataTypes.TEXT },
   objetivo_general: { type: DataTypes.STRING(100) },
   objetivos_especificos: { type: DataTypes.TEXT },
+  // Claves foráneas hacia Grupo (compuesta)
+  codigo_materia: { type: DataTypes.STRING(20), allowNull: false },
+  nombre: { type: DataTypes.STRING(1), allowNull: false },
+  periodo: { type: DataTypes.STRING(2), allowNull: false },
+  anio: { type: DataTypes.INTEGER, allowNull: false },
 }, {
   timestamps: false,
   freezeTableName: true
@@ -27,10 +32,10 @@ Idea.belongsTo(Usuario, { foreignKey: "codigo_usuario" });
 
 
 // Relación con Grupo (clave compuesta)
-Grupo.hasMany(Idea, {
-  foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
-});
-Idea.belongsTo(Grupo, {
-  foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
-});
+// Grupo.hasMany(Idea, {
+//   foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
+// });
+// Idea.belongsTo(Grupo, {
+//   foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
+// });
 export default Idea;
