@@ -8,7 +8,7 @@ const Actividad = db.define("actividad", {
     descripcion: { type: DataTypes.TEXT },
     fecha_inicio: { type: DataTypes.DATEONLY },
     fecha_cierre: { type: DataTypes.DATEONLY },
-
+    maximo_integrantes: { type: DataTypes.INTEGER },
     codigo_materia: { type: DataTypes.STRING(20), allowNull: false },
     nombre: { type: DataTypes.STRING(1), allowNull: false },
     periodo: { type: DataTypes.STRING(2), allowNull: false },
@@ -25,5 +25,9 @@ Grupo.hasMany(Actividad, {
 Actividad.belongsTo(Grupo, {
   foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
 });
+
+//Relacion con tipo_alcance
+
+
 
 export default Actividad;
