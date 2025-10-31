@@ -2,6 +2,7 @@ import db from "../db/db.js";
 import { DataTypes } from "sequelize";
 import Estado from "./Estado.js";
 import Usuario from "./Usuario.js";
+import Grupo from "./Grupo.js";
 
 const Idea = db.define("Idea", {
   id_idea: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
