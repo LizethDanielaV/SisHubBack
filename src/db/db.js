@@ -47,4 +47,5 @@ export async function createTables() {
   }
 }
 
+
 export default db;
