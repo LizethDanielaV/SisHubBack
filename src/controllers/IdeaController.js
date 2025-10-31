@@ -26,11 +26,26 @@ async function revisarIdea(req, res) {
 
 async function crearIdea(req, res) {
     try {
-        const codigoUsuario = req.usuario.codigo;
         const datosIdea = req.body;
 
         // Validaciones de entrada
-        const { titulo, problema, justificacion, objetivo_general, objetivos_especificos, grupo, integrantes } = datosIdea;
+        const { 
+            titulo, 
+            problema, 
+            justificacion, 
+            objetivo_general, 
+            objetivos_especificos, 
+            grupo, 
+            integrantes,
+            codigo_usuario  // ← AHORA VIENE EN EL BODY
+        } = datosIdea;
+
+        // Validar que venga el código de usuario
+        if (!codigo_usuario || codigo_usuario.trim().length === 0) {
+            return res.status(400).json({
+                error: "El código de usuario es obligatorio"
+            });
+        }
 
         if (!titulo || titulo.trim().length === 0) {
             return res.status(400).json({
@@ -103,14 +118,15 @@ async function crearIdea(req, res) {
             }
 
             // Validar que el líder no esté en la lista
-            if (integrantes.includes(codigoUsuario)) {
+            if (integrantes.includes(codigo_usuario)) {
                 return res.status(400).json({
                     error: "No debes incluirte en la lista de integrantes, ya eres el líder automáticamente"
                 });
             }
         }
 
-        const ideaCreada = await IdeaService.crearIdea(datosIdea, codigoUsuario);
+        // Pasar todo el objeto datosIdea que ya incluye codigo_usuario
+        const ideaCreada = await IdeaService.crearIdea(datosIdea);
 
         return res.status(201).json({
             mensaje: "Idea creada exitosamente",
@@ -128,12 +144,18 @@ async function crearIdea(req, res) {
 async function actualizarIdea(req, res) {
     try {
         const idIdea = parseInt(req.params.id);
-        const codigoUsuario = req.usuario.codigo;
         const datosActualizacion = req.body;
 
         if (isNaN(idIdea)) {
             return res.status(400).json({
                 error: "ID de idea inválido"
+            });
+        }
+
+        // Validar que venga el código de usuario
+        if (!datosActualizacion.codigo_usuario) {
+            return res.status(400).json({
+                error: "El código de usuario es obligatorio"
             });
         }
 
@@ -201,14 +223,14 @@ async function actualizarIdea(req, res) {
             }
 
             // Validar que el líder no esté en la lista
-            if (datosActualizacion.integrantes_eliminar.includes(codigoUsuario)) {
+            if (datosActualizacion.integrantes_eliminar.includes(datosActualizacion.codigo_usuario)) {
                 return res.status(400).json({
                     error: "No puedes eliminarte como líder del equipo"
                 });
             }
         }
 
-        const ideaActualizada = await IdeaService.actualizarIdea(idIdea, datosActualizacion, codigoUsuario);
+        const ideaActualizada = await IdeaService.actualizarIdea(idIdea, datosActualizacion);
 
         return res.status(200).json({
             mensaje: "Idea actualizada exitosamente",

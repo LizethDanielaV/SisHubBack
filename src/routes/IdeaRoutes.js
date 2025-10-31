@@ -5,16 +5,15 @@ import { verificarRol } from "../middlewares/roles.js";
 
 const router = Router();
 
-router.put("/:id_idea/revisar", verificarToken, verificarRol([2]), IdeaController.revisarIdea);
 
-router.post("/crear", IdeaController.crearIdea);
+router.post("/crear", verificarToken, IdeaController.crearIdea);
+
+router.get("/grupo/listar", IdeaController.listarIdeasGrupo);
 
 router.put("/actualizar/:id", IdeaController.actualizarIdea);
 
-router.get("/mis-ideas", IdeaController.listarMisIdeas);
-
 router.get("/:id", IdeaController.obtenerIdea);
 
-router.get("/grupo/listar", IdeaController.listarIdeasGrupo);
+router.put("/:id_idea/revisar", verificarToken, verificarRol([2]), IdeaController.revisarIdea);
 
 export default router;

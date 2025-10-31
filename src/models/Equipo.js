@@ -16,11 +16,11 @@ const Equipo = db.define("equipo", {
 });
 
 // Relación con Grupo (clave compuesta)
-Grupo.hasMany(Equipo, {
+/* Grupo.hasMany(Equipo, {
     foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
 });
 Equipo.belongsTo(Grupo, {
     foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
-});
+}); */
 
 export default Equipo;
