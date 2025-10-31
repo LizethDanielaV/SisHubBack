@@ -10,6 +10,9 @@ import areaRoutes from "./routes/areas.js";
 import materiasRoutes from "./routes/materias.js"
 import grupoRoutes from "./routes/grupos.js";
 import gruposUsuariosRoutes from "./routes/gruposUsuarios.js";
+import actividadRoutes from "./routes/ActividadRoutes.js";
+import EsquemaRoutes from "./routes/EsquemaRoutes.js";
+import TipoAlcanceRoutes from "./routes/TipoAlcanceRoutes.js";  
 
 dotenv.config();
 
@@ -50,7 +53,9 @@ app.use("/api/areas", areaRoutes);
 app.use("/api/materias", materiasRoutes);
 app.use("/api/grupos", grupoRoutes);
 app.use("/api/grupos-usuarios", gruposUsuariosRoutes);
-
+app.use("/api/actividades", actividadRoutes);
+app.use("/api/esquemas", EsquemaRoutes);
+app.use("/api/tipos-alcance", TipoAlcanceRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
