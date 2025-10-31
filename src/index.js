@@ -2,8 +2,6 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
-import Esquema from "./models/Esquema.js";
-import TipoAlcance from "./models/TipoAlcance.js";
 import db, { testConnection } from "./db/db.js";
 
 // Importar rutas
@@ -44,19 +42,7 @@ app.use(express.json());
 
 // Conectar DB
 testConnection();
-//Crear tabla individual
-// Función para crear solo la tabla Item
-export async function createOnlyOne() {
-  try {
-    await TipoAlcance.sync({ alter: true }); // Solo afecta a Item
-    console.log("Tabla alcance creada exitosamente");
-    await Esquema.sync({ alter: true }); // Solo afecta a Item
-    console.log("Tabla esquema creada exitosamente");
-  } catch (error) {
-    console.error("Error al crear tabla Item:", error.message);
-  }
-}
-createOnlyOne();
+
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
