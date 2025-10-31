@@ -6,6 +6,7 @@ import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
 // Importar rutas
 import usuarioRoutes from "./routes/usuarios.js";
+import IdeaRoutes from "./routes/IdeaRoutes.js";
 import areaRoutes from "./routes/areas.js";
 import materiasRoutes from "./routes/materias.js"
 import grupoRoutes from "./routes/grupos.js";
@@ -49,6 +50,7 @@ testConnection();
 
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
+app.use("/api/ideas", IdeaRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/materias", materiasRoutes);
 app.use("/api/grupos", grupoRoutes);
