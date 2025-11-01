@@ -240,198 +240,198 @@ async function crearIdea(datosIdea) {
 }
 
 async function actualizarIdea(idIdea, datosActualizacion) {
-  const transaction = await db.transaction();
+    const transaction = await db.transaction();
 
-  try {
-    const { codigo_usuario } = datosActualizacion;
+    try {
+        const { codigo_usuario } = datosActualizacion;
 
-    const idea = await Idea.findByPk(idIdea, {
-      include: [{ model: Estado, as: "Estado" }]
-    });
-
-    if (!idea) {
-      throw new Error("Idea no encontrada");
-    }
-
-    if (idea.codigo_usuario !== codigo_usuario) {
-      throw new Error("No tienes permiso para actualizar esta idea");
-    }
-
-    if (idea.Estado.descripcion !== "STAND_BY") {
-      throw new Error("Solo se pueden actualizar ideas en estado STAND_BY");
-    }
-
-    const camposActualizables = ["titulo", "problema", "justificacion", "objetivo_general", "objetivos_especificos"];
-    const datosParaActualizar = {};
-    let seActualizoIdea = false;
-
-    camposActualizables.forEach(campo => {
-      if (datosActualizacion[campo] !== undefined) {
-        datosParaActualizar[campo] = datosActualizacion[campo];
-        seActualizoIdea = true;
-      }
-    });
-
-    if (seActualizoIdea) {
-      const estadoRevision = await Estado.findOne({
-        where: { descripcion: "REVISION" }
-      });
-
-      datosParaActualizar.id_estado = estadoRevision.id_estado;
-
-      await idea.update(datosParaActualizar, { transaction });
-
-      await HistorialIdea.create({
-        id_idea: idIdea,
-        id_estado: estadoRevision.id_estado,
-        codigo_usuario: codigo_usuario,
-        observacion: "Idea actualizada tras observaciones y enviada nuevamente a revisión"
-      }, { transaction });
-    }
-
-    const equipo = await Equipo.findOne({
-      where: {
-        codigo_materia: idea.codigo_materia,
-        nombre: idea.nombre,
-        periodo: idea.periodo,
-        anio: idea.anio
-      }
-    });
-
-    if (!equipo) {
-      throw new Error("Equipo no encontrado");
-    }
-
-    const actividad = await Actividad.findOne({
-      where: {
-        codigo_materia: idea.codigo_materia,
-        nombre: idea.nombre,
-        periodo: idea.periodo,
-        anio: idea.anio
-      }
-    });
-
-    if (!actividad) {
-      throw new Error("No se encontró la actividad asociada");
-    }
-
-    if (datosActualizacion.integrantes_agregar && Array.isArray(datosActualizacion.integrantes_agregar)) {
-      const integrantesAgregar = datosActualizacion.integrantes_agregar;
-
-      // Contar integrantes actuales del equipo
-      const integrantesActuales = await IntegranteEquipo.count({
-        where: { id_equipo: equipo.id_equipo }
-      });
-
-      // Validar que no se exceda el máximo
-      const totalDespuesDeAgregar = integrantesActuales + integrantesAgregar.length;
-      
-      if (totalDespuesDeAgregar > actividad.maximo_integrantes) {
-        throw new Error(`El equipo no puede tener más de ${actividad.maximo_integrantes} integrantes. Actualmente tiene ${integrantesActuales} integrantes e intentas agregar ${integrantesAgregar.length} más.`);
-      }
-
-      if (integrantesAgregar.length > 5) {
-        throw new Error("No se pueden agregar más de 5 integrantes a la vez");
-      }
-
-      for (const codigoIntegrante of integrantesAgregar) {
-        if (codigoIntegrante === codigo_usuario) {
-          throw new Error("El líder ya es parte del equipo");
-        }
-
-        const usuarioIntegrante = await Usuario.findOne({
-          where: { codigo: codigoIntegrante },
-          include: [{ model: Estado, as: "Estado" }]
+        const idea = await Idea.findByPk(idIdea, {
+            include: [{ model: Estado, as: "Estado" }]
         });
 
-        if (!usuarioIntegrante) {
-          throw new Error(`Usuario ${codigoIntegrante} no encontrado`);
+        if (!idea) {
+            throw new Error("Idea no encontrada");
         }
 
-        if (usuarioIntegrante.id_rol !== 3) {
-          throw new Error(`El usuario ${codigoIntegrante} no es estudiante`);
+        if (idea.codigo_usuario !== codigo_usuario) {
+            throw new Error("No tienes permiso para actualizar esta idea");
         }
 
-        const integranteEnGrupo = await GrupoUsuario.findOne({
-          where: {
-            codigo_usuario: codigoIntegrante,
-            codigo_materia: idea.codigo_materia,
-            nombre: idea.nombre,
-            periodo: idea.periodo,
-            anio: idea.anio,
-            estado: true
-          }
+        if (idea.Estado.descripcion !== "STAND_BY") {
+            throw new Error("Solo se pueden actualizar ideas en estado STAND_BY");
+        }
+
+        const camposActualizables = ["titulo", "problema", "justificacion", "objetivo_general", "objetivos_especificos"];
+        const datosParaActualizar = {};
+        let seActualizoIdea = false;
+
+        camposActualizables.forEach(campo => {
+            if (datosActualizacion[campo] !== undefined) {
+                datosParaActualizar[campo] = datosActualizacion[campo];
+                seActualizoIdea = true;
+            }
         });
 
-        if (!integranteEnGrupo) {
-          throw new Error(`El usuario ${codigoIntegrante} no pertenece al grupo`);
+        if (seActualizoIdea) {
+            const estadoRevision = await Estado.findOne({
+                where: { descripcion: "REVISION" }
+            });
+
+            datosParaActualizar.id_estado = estadoRevision.id_estado;
+
+            await idea.update(datosParaActualizar, { transaction });
+
+            await HistorialIdea.create({
+                id_idea: idIdea,
+                id_estado: estadoRevision.id_estado,
+                codigo_usuario: codigo_usuario,
+                observacion: "Idea actualizada tras observaciones y enviada nuevamente a revisión"
+            }, { transaction });
         }
 
-        const yaEnEquipo = await IntegranteEquipo.findOne({
-          where: {
-            codigo_usuario: codigoIntegrante,
-            id_equipo: equipo.id_equipo
-          }
+        const equipo = await Equipo.findOne({
+            where: {
+                codigo_materia: idea.codigo_materia,
+                nombre: idea.nombre,
+                periodo: idea.periodo,
+                anio: idea.anio
+            }
         });
 
-        if (yaEnEquipo) {
-          throw new Error(`El usuario ${codigoIntegrante} ya está en el equipo`);
+        if (!equipo) {
+            throw new Error("Equipo no encontrado");
         }
 
-        await IntegranteEquipo.create({
-          codigo_usuario: codigoIntegrante,
-          id_equipo: equipo.id_equipo,
-          rol_equipo: "Integrante",
-          es_lider: false
-        }, { transaction });
-      }
-    }
-
-    if (datosActualizacion.integrantes_eliminar && Array.isArray(datosActualizacion.integrantes_eliminar)) {
-      const integrantesEliminar = datosActualizacion.integrantes_eliminar;
-
-      for (const codigoIntegrante of integrantesEliminar) {
-        if (codigoIntegrante === codigo_usuario) {
-          throw new Error("No puedes eliminarte como líder del equipo");
-        }
-
-        const integrante = await IntegranteEquipo.findOne({
-          where: {
-            codigo_usuario: codigoIntegrante,
-            id_equipo: equipo.id_equipo,
-            es_lider: false
-          }
+        const actividad = await Actividad.findOne({
+            where: {
+                codigo_materia: idea.codigo_materia,
+                nombre: idea.nombre,
+                periodo: idea.periodo,
+                anio: idea.anio
+            }
         });
 
-        if (!integrante) {
-          throw new Error(`El usuario ${codigoIntegrante} no es integrante del equipo`);
+        if (!actividad) {
+            throw new Error("No se encontró la actividad asociada");
         }
 
-        await integrante.destroy({ transaction });
-      }
+        if (datosActualizacion.integrantes_agregar && Array.isArray(datosActualizacion.integrantes_agregar)) {
+            const integrantesAgregar = datosActualizacion.integrantes_agregar;
+
+            // Contar integrantes actuales del equipo
+            const integrantesActuales = await IntegranteEquipo.count({
+                where: { id_equipo: equipo.id_equipo }
+            });
+
+            // Validar que no se exceda el máximo
+            const totalDespuesDeAgregar = integrantesActuales + integrantesAgregar.length;
+
+            if (totalDespuesDeAgregar > actividad.maximo_integrantes) {
+                throw new Error(`El equipo no puede tener más de ${actividad.maximo_integrantes} integrantes. Actualmente tiene ${integrantesActuales} integrantes e intentas agregar ${integrantesAgregar.length} más.`);
+            }
+
+            if (integrantesAgregar.length > 5) {
+                throw new Error("No se pueden agregar más de 5 integrantes a la vez");
+            }
+
+            for (const codigoIntegrante of integrantesAgregar) {
+                if (codigoIntegrante === codigo_usuario) {
+                    throw new Error("El líder ya es parte del equipo");
+                }
+
+                const usuarioIntegrante = await Usuario.findOne({
+                    where: { codigo: codigoIntegrante },
+                    include: [{ model: Estado, as: "Estado" }]
+                });
+
+                if (!usuarioIntegrante) {
+                    throw new Error(`Usuario ${codigoIntegrante} no encontrado`);
+                }
+
+                if (usuarioIntegrante.id_rol !== 3) {
+                    throw new Error(`El usuario ${codigoIntegrante} no es estudiante`);
+                }
+
+                const integranteEnGrupo = await GrupoUsuario.findOne({
+                    where: {
+                        codigo_usuario: codigoIntegrante,
+                        codigo_materia: idea.codigo_materia,
+                        nombre: idea.nombre,
+                        periodo: idea.periodo,
+                        anio: idea.anio,
+                        estado: true
+                    }
+                });
+
+                if (!integranteEnGrupo) {
+                    throw new Error(`El usuario ${codigoIntegrante} no pertenece al grupo`);
+                }
+
+                const yaEnEquipo = await IntegranteEquipo.findOne({
+                    where: {
+                        codigo_usuario: codigoIntegrante,
+                        id_equipo: equipo.id_equipo
+                    }
+                });
+
+                if (yaEnEquipo) {
+                    throw new Error(`El usuario ${codigoIntegrante} ya está en el equipo`);
+                }
+
+                await IntegranteEquipo.create({
+                    codigo_usuario: codigoIntegrante,
+                    id_equipo: equipo.id_equipo,
+                    rol_equipo: "Integrante",
+                    es_lider: false
+                }, { transaction });
+            }
+        }
+
+        if (datosActualizacion.integrantes_eliminar && Array.isArray(datosActualizacion.integrantes_eliminar)) {
+            const integrantesEliminar = datosActualizacion.integrantes_eliminar;
+
+            for (const codigoIntegrante of integrantesEliminar) {
+                if (codigoIntegrante === codigo_usuario) {
+                    throw new Error("No puedes eliminarte como líder del equipo");
+                }
+
+                const integrante = await IntegranteEquipo.findOne({
+                    where: {
+                        codigo_usuario: codigoIntegrante,
+                        id_equipo: equipo.id_equipo,
+                        es_lider: false
+                    }
+                });
+
+                if (!integrante) {
+                    throw new Error(`El usuario ${codigoIntegrante} no es integrante del equipo`);
+                }
+
+                await integrante.destroy({ transaction });
+            }
+        }
+
+        await transaction.commit();
+
+    } catch (error) {
+        if (!transaction.finished) {
+            await transaction.rollback();
+        }
+        throw error;
     }
 
-    await transaction.commit();
-
-  } catch (error) {
-    if (!transaction.finished) {
-      await transaction.rollback();
+    try {
+        return await obtenerIdeaPorId(idIdea);
+    } catch (error) {
+        console.error("Error al obtener idea actualizada:", error);
+        return {
+            id_idea: idIdea,
+            mensaje: "Idea actualizada exitosamente, pero hubo un error al obtener los detalles completos"
+        };
     }
-    throw error;
-  }
-
-  try {
-    return await obtenerIdeaPorId(idIdea);
-  } catch (error) {
-    console.error("Error al obtener idea actualizada:", error);
-    return {
-      id_idea: idIdea,
-      mensaje: "Idea actualizada exitosamente, pero hubo un error al obtener los detalles completos"
-    };
-  }
 }
 
-
+//revisar
 async function obtenerIdeaPorId(idIdea) {
     // 1. Obtener la idea con sus relaciones simples
     const idea = await Idea.findByPk(idIdea, {
@@ -565,87 +565,80 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
     const t = await db.transaction();
 
     try {
-      // 1️⃣ Buscar la idea
-      const idea = await Idea.findByPk(id_idea);
-      if (!idea) throw new Error("La idea no existe");
+        const idea = await Idea.findByPk(id_idea);
+        if (!idea) throw new Error("La idea no existe");
 
-      // 2️⃣ Obtener el estado STAND_BY
-      const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
-      if (!estadoStandBy) throw new Error("No se encontró el estado STAND_BY");
+        const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
+        if (!estadoStandBy) throw new Error("No se encontró el estado STAND_BY");
 
-      // 3️⃣ Buscar si el usuario ya tiene un equipo activo en ese grupo
-      const equipoExistente = await Equipo.findOne({
-        where: {
-          codigo_materia: grupo.codigo_materia,
-          nombre: grupo.nombre,
-          periodo: grupo.periodo,
-          anio: grupo.anio,
-          estado: true
-        },
-        include: [
-          {
-            model: IntegranteEquipo,
-            where: { codigo_usuario, es_lider: true },
-            required: false
-          }
-        ],
-        transaction: t
-      });
+        const equipoExistente = await Equipo.findOne({
+            where: {
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio,
+                estado: true
+            },
+            include: [
+                {
+                    model: IntegranteEquipo,
+                    where: { codigo_usuario, es_lider: true },
+                    required: false
+                }
+            ],
+            transaction: t
+        });
 
-      let equipoAsociado = equipoExistente;
-
-      // 4️⃣ Si no tiene equipo activo, crear uno nuevo y hacerlo líder
-      if (!equipoExistente) {
-        equipoAsociado = await Equipo.create(
-          {
-            descripcion: `Equipo de ${codigo_usuario}`,
-            codigo_materia: grupo.codigo_materia,
-            nombre: grupo.nombre,
-            periodo: grupo.periodo,
-            anio: grupo.anio,
-            estado: true
-          },
-          { transaction: t }
+        const equipoAsociado = await Equipo.create(
+            {
+                descripcion: `Equipo de ${codigo_usuario}`,
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio,
+                estado: true
+            },
+            { transaction: t }
         );
 
+        // Crear líder
         await IntegranteEquipo.create(
-          {
-            codigo_usuario,
-            id_equipo: equipoAsociado.id_equipo,
-            rol_equipo: "Líder",
-            es_lider: true
-          },
-          { transaction: t }
+            {
+                codigo_usuario,
+                id_equipo: equipoAsociado.id_equipo,
+                rol_equipo: "Líder",
+                es_lider: true
+            },
+            { transaction: t }
         );
-      }
 
-      // 5️⃣ Actualizar la idea
-      await idea.update(
-        {
-          id_estado: estadoStandBy.id_estado,
-          codigo_usuario,
-          codigo_materia: grupo.codigo_materia,
-          nombre: grupo.nombre,
-          periodo: grupo.periodo,
-          anio: grupo.anio
-        },
-        { transaction: t }
-      );
+        await idea.update(
+            {
+                id_estado: estadoStandBy.id_estado,
+                codigo_usuario,
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio
+            },
+            { transaction: t }
+        );
 
-      await t.commit();
+        await t.commit();
 
-      return {
-        message: "Idea adoptada correctamente",
-        idea,
-        equipo: equipoAsociado
-      };
+        return {
+            message: "Idea adoptada correctamente",
+            idea,
+            equipo: equipoAsociado
+        };
     } catch (error) {
-      await t.rollback();
-      console.error("Error al adoptar idea:", error);
-      throw error;
+        await t.rollback();
+        console.error("Error al adoptar idea:", error);
+        throw error;
     }
 }
 
+//revisar
 async function listarIdeasPorGrupo(datosGrupo) {
     const ideas = await Idea.findAll({
         where: {
@@ -732,12 +725,12 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                     }
                 }
 
-                idea.codigo_materia=null;
-                idea.nombre=null;
-                idea.periodo=null;
-                idea.anio=null;
+                idea.codigo_materia = null;
+                idea.nombre = null;
+                idea.periodo = null;
+                idea.anio = null;
                 await idea.save({ transaction });
-                
+
                 break;
         }
 
@@ -836,6 +829,5 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
         throw new Error("Error al mover la idea al banco: " + error.message);
     }
 }
-
 
 export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };
