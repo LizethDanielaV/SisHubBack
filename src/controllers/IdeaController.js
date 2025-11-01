@@ -37,7 +37,7 @@ async function crearIdea(req, res) {
             objetivos_especificos,
             grupo,
             integrantes,
-            codigo_usuario  // ← AHORA VIENE EN EL BODY
+            codigo_usuario  
         } = datosIdea;
 
         // Validar que venga el código de usuario
@@ -344,7 +344,7 @@ async function moverIdeaAlBancoPorDecision(req, res) {
   }
 }
 
-// ahorita continua...
+// revisar
 async function listarIdeasGrupo(req, res) {
     try {
         const { codigo_materia, nombre, periodo, anio } = req.query;
