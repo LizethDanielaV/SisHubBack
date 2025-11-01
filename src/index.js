@@ -14,6 +14,7 @@ import actividadRoutes from "./routes/ActividadRoutes.js";
 import EsquemaRoutes from "./routes/EsquemaRoutes.js";
 import TipoAlcanceRoutes from "./routes/TipoAlcanceRoutes.js";
 import IdeaRoutes from "./routes/IdeaRoutes.js";
+import ProyectoRoutes from "./routes/ProyectoRoutes.js";
 dotenv.config();
 
 
@@ -57,6 +58,7 @@ app.use("/api/actividades", actividadRoutes);
 app.use("/api/esquemas", EsquemaRoutes);
 app.use("/api/tipos-alcance", TipoAlcanceRoutes);
 app.use("/api/ideas", IdeaRoutes);
+app.use("/api/proyectos", ProyectoRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
