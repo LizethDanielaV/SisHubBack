@@ -95,34 +95,6 @@ async function enviarProyectoARevision(req, res) {
   }
 }
 
-async function listarEntregablesPorActividad(req, res) {
-  try {
-    const { id_actividad } = req.params;
-
-    if (!id_actividad) {
-      return res.status(400).json({ 
-        message: "Debe proporcionar el id de la actividad." 
-      });
-    }
-
-    const entregables = await EntregableService.listarEntregablesPorActividad(
-      id_actividad
-    );
-
-    if (entregables.message) {
-      return res.status(200).json({ message: entregables.message });
-    }
-
-    return res.status(200).json(entregables);
-    
-  } catch (error) {
-    res.status(500).json({
-      message: "Error al listar los entregables de la actividad.",
-      error: error.message,
-    });
-  }
-}
-
 async function retroalimentarEntregable(req, res) {
   try {
     const { id_entregable } = req.params;
@@ -171,7 +143,6 @@ async function obtenerTiposEntregable(req, res) {
 export default {
   crearEntregable,
   enviarProyectoARevision,
-  listarEntregablesPorActividad,
   retroalimentarEntregable,
   obtenerTiposEntregable
 };
