@@ -10,7 +10,7 @@
 // import "./GrupoUsuario.js";
 
 // // Modelos relacionados con ideas, proyectos y entregables
-import "./Idea.js";
+// import "./Idea.js";
 // import "./Proyecto.js";
 // import "./Entregable.js";
 // import "./HistorialIdea.js";
