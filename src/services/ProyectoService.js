@@ -237,6 +237,7 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
     }
 }
 
+//revisar
 async function obtenerProyectoPorId(idProyecto) {
     const proyecto = await Proyecto.findByPk(idProyecto, {
         include: [

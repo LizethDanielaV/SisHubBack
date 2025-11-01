@@ -61,24 +61,10 @@ const upload = multer({
 });
 
 router.get("/tipos", EntregableController.obtenerTiposEntregable);
-
-router.post(
-  "/crear",
-/*   verificarToken,
-  verificarRol([3]),  */
-  upload.single('archivo'), 
-  EntregableController.crearEntregable
-);
-
-router.post(
-  "/proyecto/:id_proyecto/enviar-revision",
-/*   verificarToken,
-  verificarRol([3]),  */
-  EntregableController.enviarProyectoARevision
-);
+router.post("/crear",/*   verificarToken, verificarRol([3]),  */upload.single('archivo'), EntregableController.crearEntregable);
+router.post("/proyecto/:id_proyecto/enviar-revision",EntregableController.enviarProyectoARevision);
 
 
-router.get("/actividad/:id_actividad", verificarToken, verificarRol([1, 2]), EntregableController.listarEntregablesPorActividad);
 router.put(
     "/retroalimentar/:id_entregable",
     //   verificarToken,verificarRol([1, 2]), 

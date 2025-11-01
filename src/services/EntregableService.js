@@ -208,8 +208,6 @@ async function procesarArchivo(tipo, datos) {
     }
 }
 
-
-
 /**
  * Crea un nuevo entregable
  */
@@ -408,44 +406,6 @@ async function enviarProyectoARevision(id_proyecto, id_actividad, codigo_usuario
     }
 }
 
-async function listarEntregablesPorActividad(id_actividad) {
-    try {
-        const actividad = await Actividad.findByPk(id_actividad);
-        if (!actividad) throw new Error("Actividad no encontrada");
-
-        const entregables = await Entregable.findAll({
-            where: { id_actividad },
-            include: [
-                {
-                    model: Equipo,
-                    attributes: ["id_equipo", "descripcion", "estado"]
-                },
-                {
-                    model: Proyecto,
-                    attributes: ["linea_investigacion", "tecnologias", "palabras_clave"],
-                    include: [{
-                        model: Idea,
-                        attributes: ["titulo", "problema", "justificacion", "objetivo_general", "objetivos_especificos"]
-                    }]
-                },
-                {
-                    model: Estado,
-                    attributes: ["id_estado", "descripcion"]
-                }
-            ],
-            attributes: ["id_entregable", "tipo", "nombre_archivo", "url_archivo", "comentarios", "fecha_subida", "calificacion"]
-        });
-
-        if (entregables.length === 0) {
-            return { message: "No hay entregables registrados para esta actividad." };
-        }
-
-        return entregables;
-    } catch (error) {
-        throw new Error("Error al listar entregables por actividad: " + error.message);
-    }
-}
-
 async function retroalimentarEntregable(id_entregable, comentarios, calificacion, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -497,7 +457,6 @@ async function retroalimentarEntregable(id_entregable, comentarios, calificacion
 export default {
     crearEntregable,
     enviarProyectoARevision,
-    listarEntregablesPorActividad,
     retroalimentarEntregable,
     TIPOS_ENTREGABLE
 };
