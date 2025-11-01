@@ -11,7 +11,17 @@ const Entregable = db.define("entregable", {
     nombre_archivo: { type: DataTypes.STRING(200) },
     url_archivo: { type: DataTypes.STRING(500) },
     comentarios: { type: DataTypes.STRING(200) },
-    fecha_subida: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
+    fecha_subida: { 
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+        get() {
+            const rawDate = this.getDataValue('fecha_subida');
+            if (!rawDate) return null;
+            return new Date(rawDate).toLocaleString('es-CO', {
+                timeZone: 'America/Bogota'
+            });
+        }
+    },
     calificacion: { type: DataTypes.DECIMAL(4, 2) }
 }, {
     timestamps: false,
