@@ -892,6 +892,13 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
     }
 }
 
+async function continuarProyecto(idProyecto, codigo_usuario) {
+    // Implementación pendiente
+}
+
+async function listarProyectosParaContinuar() {
+    // Implementación pendiente
+}
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
@@ -900,6 +907,8 @@ export default {
     listarProyectosDirector,
     revisarProyecto,
     listarPropuestasLibres,
-    adoptarPropuesta
+    adoptarPropuesta,
+    continuarProyecto,
+    listarProyectosParaContinuar    
 };
 
