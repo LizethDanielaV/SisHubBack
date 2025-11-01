@@ -96,45 +96,6 @@ async function obtenerProyecto(req, res) {
     }
 }
 
-async function listarProyectosPorGrupo(req, res) {
-    try {
-        const { codigo_materia, nombre, periodo, anio } = req.query;
-
-        if (!codigo_materia || !nombre || !periodo || !anio) {
-            return res.status(400).json({
-                error: "Debe proporcionar codigo_materia, nombre, periodo y anio"
-            });
-        }
-
-        const datosGrupo = {
-            codigo_materia,
-            nombre,
-            periodo,
-            anio: parseInt(anio)
-        };
-
-        if (isNaN(datosGrupo.anio)) {
-            return res.status(400).json({
-                error: "El año debe ser un número válido"
-            });
-        }
-
-        const proyectos = await ProyectoService.listarProyectosPorGrupo(datosGrupo);
-
-        return res.status(200).json({
-            total: proyectos.length,
-            grupo: datosGrupo,
-            data: proyectos
-        });
-
-    } catch (error) {
-        console.error("Error al listar proyectos del grupo:", error);
-        return res.status(500).json({
-            error: "Error al listar los proyectos del grupo"
-        });
-    }
-}
-
 async function actualizarProyecto(req, res) {
     try {
         const idProyecto = parseInt(req.params.id);
@@ -201,6 +162,29 @@ async function actualizarProyecto(req, res) {
     }
 }
 
+async function listarParaDirector(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarProyectosDirector();
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+async function listarParaDirector(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarProyectosDirector();
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+
 export const revisarProyecto = async (req, res) => {
   try {
     const { id_proyecto, accion, observacion, codigo_usuario } = req.body;
@@ -230,6 +214,6 @@ export const revisarProyecto = async (req, res) => {
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
-    listarProyectosPorGrupo,
-    actualizarProyecto, revisarProyecto
+    actualizarProyecto, 
+    listarParaDirector, revisarProyecto
 };

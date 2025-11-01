@@ -451,53 +451,6 @@ async function obtenerProyectoPorId(idProyecto) {
     };
 }
 
-async function listarProyectosPorGrupo(datosGrupo) {
-    // Primero obtenemos las ideas de ese grupo
-    const ideas = await Idea.findAll({
-        where: {
-            codigo_materia: datosGrupo.codigo_materia,
-            nombre: datosGrupo.nombre,
-            periodo: datosGrupo.periodo,
-            anio: datosGrupo.anio
-        },
-        attributes: ["id_idea"]
-    });
-
-    if (!ideas || ideas.length === 0) {
-        return [];
-    }
-
-    const idsIdeas = ideas.map(i => i.id_idea);
-
-    const proyectos = await Proyecto.findAll({
-        where: {
-            id_idea: idsIdeas
-        },
-        include: [
-            {
-                model: Idea,
-                as: "Idea",
-                attributes: ["id_idea", "titulo", "codigo_usuario"],
-                include: [
-                    {
-                        model: Usuario,
-                        as: "Usuario",
-                        attributes: ["codigo", "nombre", "correo"]
-                    }
-                ]
-            },
-            {
-                model: TipoAlcance,
-                as: "Tipo_alcance",
-                attributes: ["id_tipo_alcance", "nombre"]
-            }
-        ],
-        order: [["fecha_creacion", "DESC"]]
-    });
-
-    return proyectos;
-}
-
 async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -563,6 +516,42 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
         }
         throw error;
     }
+}
+
+async function listarProyectosDirector(){
+    try {
+    const proyectos = await Proyecto.findAll({
+     attributes: ['codigo', 'nombre', 'semestre'],
+      include: [{
+        model: TipoAlcance,
+        attributes: ['nombre']
+      }, {
+        model: Idea, 
+        attributes: ['objetivo_general']
+      }],
+    });
+    return proyectos;
+  } catch (error) {
+    throw new Error("Error al obtener los proyectos " + error.message);
+  }
+}
+
+async function listarProyectosDirector(){
+    try {
+    const proyectos = await Proyecto.findAll({
+     attributes: ['codigo', 'nombre', 'semestre'],
+      include: [{
+        model: TipoAlcance,
+        attributes: ['nombre']
+      }, {
+        model: Idea, 
+        attributes: ['objetivo_general']
+      }],
+    });
+    return proyectos;
+  } catch (error) {
+    throw new Error("Error al obtener los proyectos " + error.message);
+  }
 }
 
 async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario) {
@@ -682,7 +671,8 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
-    listarProyectosPorGrupo,
-    actualizarProyecto,
+    actualizarProyecto, 
+    listarProyectosDirector,
     revisarProyecto
 };
+

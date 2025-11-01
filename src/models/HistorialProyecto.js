@@ -38,7 +38,12 @@
     Usuario.hasMany(HistorialProyecto, { foreignKey: "codigo_usuario" });
     HistorialProyecto.belongsTo(Usuario, { foreignKey: "codigo_usuario" });
 
-    Equipo.hasMany(HistorialProyecto, { foreignKey: "id_equipo" });
-    HistorialProyecto.belongsTo(Equipo, { foreignKey: "id_equipo" });
+    //Relacion con Equipo
+    Equipo.hasMany(HistorialProyecto, {
+        foreignKey: "id_equipo"
+    });
+    HistorialProyecto.belongsTo(Equipo, {
+        foreignKey: "id_equipo"
+    });
 
     export default HistorialProyecto;
