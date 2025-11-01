@@ -731,6 +731,13 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                         await equipo.save({ transaction });
                     }
                 }
+
+                idea.codigo_materia=null;
+                idea.nombre=null;
+                idea.periodo=null;
+                idea.anio=null;
+                await idea.save({ transaction });
+                
                 break;
         }
 
