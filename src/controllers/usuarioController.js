@@ -1,6 +1,6 @@
 import Rol from "../models/Rol.js";
 import Usuario from "../models/Usuario.js";
-import admin from "../firebaseAdmin.js";
+import { admin } from "../firebaseAdmin.js";
 import Estado from "../models/Estado.js";
 import UsuarioService from "../services/UsuarioService.js";
 
