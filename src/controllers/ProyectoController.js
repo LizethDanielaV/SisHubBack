@@ -173,9 +173,47 @@ async function listarParaDirector(req, res) {
   }
 }
 
+async function listarParaDirector(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarProyectosDirector();
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+
+export const revisarProyecto = async (req, res) => {
+  try {
+    const { id_proyecto, accion, observacion, codigo_usuario } = req.body;
+
+    if (!id_proyecto || !accion || !codigo_usuario) {
+      return res.status(400).json({
+        message: "Faltan datos obligatorios: id_proyecto, accion o codigo_usuario.",
+      });
+    }
+
+    const resultado = await ProyectoService.revisarProyecto(
+      id_proyecto,
+      accion,
+      observacion,
+      codigo_usuario
+    );
+
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al revisar el proyecto.",
+      error: error.message,
+    });
+  }
+};
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
     actualizarProyecto, 
-    listarParaDirector
+    listarParaDirector, revisarProyecto
 };
