@@ -13,17 +13,17 @@ async function crearIdea(datosIdea) {
   const transaction = await db.transaction();
   let idIdeaCreada = null;
 
-  try {
-    const {
-      titulo,
-      problema,
-      justificacion,
-      objetivo_general,
-      objetivos_especificos,
-      grupo,
-      integrantes,
-      codigo_usuario
-    } = datosIdea;
+    try {
+        const {
+            titulo,
+            problema,
+            justificacion,
+            objetivo_general,
+            objetivos_especificos,
+            grupo,
+            integrantes,
+            codigo_usuario
+        } = datosIdea;
 
     // 1. Validar que el usuario existe y es estudiante
     const usuario = await Usuario.findOne({
@@ -482,25 +482,138 @@ async function obtenerIdeaPorId(idIdea) {
   };
 }
 
-async function listarIdeasUsuario(codigoUsuario) {
-  const ideas = await Idea.findAll({
-    where: { codigo_usuario: codigoUsuario },
-    include: [
-      {
-        model: Estado,
-        as: "Estado",
-        attributes: ["descripcion"]
-      },
-      {
-        model: Grupo,
-        as: "Grupo",
-        attributes: ["codigo_materia", "nombre", "periodo", "anio"]
-      }
-    ],
-    order: [["id_idea", "DESC"]]
-  });
+async function listarIdeasLibres() {
+    try {
+        const estadoLibre = await Estado.findOne({
+            where: { descripcion: "LIBRE" },
+            attributes: ["id_estado"]
+        });
 
-  return ideas;
+        if (!estadoLibre) {
+            throw new Error("No se encontró el estado 'LIBRE' en la base de datos");
+        }
+
+        const ideasLibres = await Idea.findAll({
+            where: { id_estado: estadoLibre.id_estado },
+            attributes: [
+                "id_idea",
+                "titulo",
+                "problema",
+                "justificacion",
+                "objetivo_general",
+                "objetivos_especificos",
+                "codigo_materia",
+                "nombre",
+                "periodo",
+                "anio"
+            ],
+            include: [
+                {
+                    model: Estado,
+                    as: "Estado",
+                    attributes: ["descripcion"]
+                }
+            ],
+            order: [["id_idea", "DESC"]]
+        })
+
+        return ideasLibres;
+    } catch (error) {
+        console.error("Error al listar ideas LIBRES:", error);
+        throw new Error("No fue posible listar las ideas con estado LIBRE");
+    }
+}
+
+async function adoptarIdea(id_idea, datosAdopcion) {
+  const transaction = await db.transaction();
+
+  try {
+    const { codigo_usuario, grupo } = datosAdopcion;
+
+    const idea = await Idea.findByPk(id_idea, {
+      include: [{ model: Estado, as: "Estado" }]
+    });
+
+    if (!idea) {
+      throw new Error("Idea no encontrada");
+    }
+
+    if (idea.Estado.descripcion !== "LIBRE") {
+      throw new Error("La idea no está disponible para adopción");
+    }
+
+    const usuario = await Usuario.findOne({ where: { codigo: codigo_usuario } });
+    if (!usuario) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    if (usuario.id_rol !== 3) {
+      throw new Error("Solo los estudiantes pueden adoptar ideas");
+    }
+
+    const grupoExiste = await Grupo.findOne({
+      where: {
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio,
+        estado: true
+      }
+    });
+
+    if (!grupoExiste) {
+      throw new Error("El grupo especificado no existe o no está habilitado");
+    }
+
+    const pertenece = await GrupoUsuario.findOne({
+      where: {
+        codigo_usuario,
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio,
+        estado: true
+      }
+    });
+
+    if (!pertenece) {
+      throw new Error("El estudiante no pertenece al grupo seleccionado");
+    }
+
+    const estadoStandBy = await Estado.findOne({
+      where: { descripcion: "STAND_BY" }
+    });
+
+    if (!estadoStandBy) {
+      throw new Error("Estado STAND_BY no encontrado");
+    }
+
+    await idea.update({
+      id_estado: estadoStandBy.id_estado,
+      codigo_usuario,
+      codigo_materia: grupo.codigo_materia,
+      nombre: grupo.nombre,
+      periodo: grupo.periodo,
+      anio: grupo.anio
+    }, { transaction });
+
+    await HistorialIdea.create({
+      id_idea,
+      id_estado: estadoStandBy.id_estado,
+      codigo_usuario,
+      observacion: `Idea adoptada por el estudiante ${codigo_usuario} y asignada al grupo ${grupo.codigo_materia}-${grupo.nombre}-${grupo.periodo}-${grupo.anio}`
+    }, { transaction });
+
+    await transaction.commit();
+
+    return { message: "Idea adoptada exitosamente", idea };
+
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    throw new Error("Error al adoptar la idea: " + error.message);
+  }
 }
 
 async function listarIdeasPorGrupo(datosGrupo) {
@@ -535,26 +648,26 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
     const idea = await Idea.findByPk(id_idea);
     if (!idea) throw new Error("Idea no encontrada");
 
-    // Validar acción permitida
-    const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
-    if (!accionesValidas.includes(accion)) {
-      throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
-    }
+        // Validar acción permitida
+        const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
+        if (!accionesValidas.includes(accion)) {
+            throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
+        }
 
-    // Cambiar estado según la acción
-    let nuevoEstado;
-    let mensaje;
+        // Cambiar estado según la acción
+        let nuevoEstado;
+        let mensaje;
 
-    switch (accion) {
-      case "Aprobar":
-        nuevoEstado = await Estado.findOne({ where: { descripcion: "APROBADO" } });
-        mensaje = "Idea aprobada sin observaciones.";
-        break;
+        switch (accion) {
+            case "Aprobar":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "APROBADO" } });
+                mensaje = "Idea aprobada sin observaciones.";
+                break;
 
-      case "Aprobar_Con_Observacion":
-        nuevoEstado = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
-        mensaje = "Idea aprobada con observaciones. En espera de corrección del estudiante.";
-        break;
+            case "Aprobar_Con_Observacion":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
+                mensaje = "Idea aprobada con observaciones. En espera de corrección del estudiante.";
+                break;
 
       case "Rechazar":
         nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" } });
@@ -591,16 +704,16 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
         break;
     }
 
-    if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
+        if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
 
     // Actualizar la idea
     idea.id_estado = nuevoEstado.id_estado;
     await idea.save({ transaction });
 
-    // Registrar en historial
-    const textoObservacion = observacion
-      ? `${mensaje} Observaciones: ${observacion}`
-      : mensaje;
+        // Registrar en historial
+        const textoObservacion = observacion
+            ? `${mensaje} Observaciones: ${observacion}`
+            : mensaje;
 
     await HistorialIdea.create({
       fecha: new Date(),
@@ -688,4 +801,4 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
 }
 
 
-export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasUsuario, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };
+export default {  crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };
