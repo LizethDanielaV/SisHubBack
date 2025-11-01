@@ -1,27 +1,27 @@
 import IdeaService from "../services/IdeaService.js";
 
 async function revisarIdea(req, res) {
-  try {
-    const { id_idea } = req.params;
-    const { accion, observacion, codigo_usuario } = req.body;
+    try {
+        const { id_idea } = req.params;
+        const { accion, observacion, codigo_usuario } = req.body;
 
-    if (!codigo_usuario)
-      return res.status(400).json({ message: "No se proporcionó el código del docente." });
+        if (!codigo_usuario)
+            return res.status(400).json({ message: "No se proporcionó el código del docente." });
 
-    const resultado = await IdeaService.revisarIdea(
-      id_idea,
-      accion,
-      observacion,
-      codigo_usuario
-    );
+        const resultado = await IdeaService.revisarIdea(
+            id_idea,
+            accion,
+            observacion,
+            codigo_usuario
+        );
 
-    res.status(200).json({
-      message: "Revisión registrada correctamente",
-      resultado,
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+        res.status(200).json({
+            message: "Revisión registrada correctamente",
+            resultado,
+        });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
 }
 
 async function crearIdea(req, res) {
@@ -29,13 +29,13 @@ async function crearIdea(req, res) {
         const datosIdea = req.body;
 
         // Validaciones de entrada
-        const { 
-            titulo, 
-            problema, 
-            justificacion, 
-            objetivo_general, 
-            objetivos_especificos, 
-            grupo, 
+        const {
+            titulo,
+            problema,
+            justificacion,
+            objetivo_general,
+            objetivos_especificos,
+            grupo,
             integrantes,
             codigo_usuario  // ← AHORA VIENE EN EL BODY
         } = datosIdea;
@@ -162,7 +162,7 @@ async function actualizarIdea(req, res) {
         // Validar que al menos un campo esté presente
         const camposPermitidos = ["titulo", "problema", "justificacion", "objetivo_general", "objetivos_especificos"];
         const camposGestion = ["integrantes_agregar", "integrantes_eliminar"];
-        
+
         const tieneAlgunCampo = camposPermitidos.some(campo => datosActualizacion[campo] !== undefined);
         const tieneGestionIntegrantes = camposGestion.some(campo => datosActualizacion[campo] !== undefined);
 
@@ -276,25 +276,25 @@ async function obtenerIdea(req, res) {
     }
 }
 
-async function listarMisIdeas(req, res) {
+async function listarIdeasLibres(req, res) {
     try {
-        const codigoUsuario = req.usuario.codigo;
-
-        const ideas = await IdeaService.listarIdeasUsuario(codigoUsuario);
-
-        return res.status(200).json({
+        const ideas = await IdeaService.listarIdeasLibres();
+        res.status(200).json({
+            ok: true,
             total: ideas.length,
             data: ideas
         });
-
     } catch (error) {
-        console.error("Error al listar ideas:", error);
-        return res.status(500).json({
-            error: "Error al listar las ideas"
+        console.error("Error al listar el banco de ideas:", error);
+        res.status(500).json({
+            ok: false,
+            mensaje: "Error al listar el banco de ideas",
+            error: error.message
         });
     }
 }
 
+// ahorita continua...
 async function listarIdeasGrupo(req, res) {
     try {
         const { codigo_materia, nombre, periodo, anio } = req.query;
@@ -334,4 +334,4 @@ async function listarIdeasGrupo(req, res) {
     }
 }
 
-export default { revisarIdea, crearIdea, actualizarIdea,obtenerIdea, listarMisIdeas, listarIdeasGrupo };
+export default { revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, listarIdeasGrupo };
