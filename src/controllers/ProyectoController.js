@@ -96,23 +96,6 @@ async function obtenerProyecto(req, res) {
     }
 }
 
-async function listarProyectos(req, res) {
-    try {
-        const proyectos = await ProyectoService.listarProyectos();
-
-        return res.status(200).json({
-            total: proyectos.length,
-            data: proyectos
-        });
-
-    } catch (error) {
-        console.error("Error al listar proyectos:", error);
-        return res.status(500).json({
-            error: "Error al listar los proyectos"
-        });
-    }
-}
-
 async function listarProyectosPorGrupo(req, res) {
     try {
         const { codigo_materia, nombre, periodo, anio } = req.query;
@@ -221,7 +204,6 @@ async function actualizarProyecto(req, res) {
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
-    listarProyectos,
     listarProyectosPorGrupo,
     actualizarProyecto
 };

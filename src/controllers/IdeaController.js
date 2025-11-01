@@ -297,20 +297,25 @@ async function listarIdeasLibres(req, res) {
 async function adoptarIdea(req, res) {
   try {
     const { id_idea } = req.params;
-    const datosAdopcion = req.body;
+    const { codigo_usuario, grupo } = req.body; 
 
-    const resultado = await IdeaService.adoptarIdea(id_idea, datosAdopcion);
+    if (!codigo_usuario) {
+      return res.status(400).json({ message: "El código del usuario es obligatorio." });
+    }
 
-    res.status(200).json({
-      ok: true,
-      mensaje: resultado.message,
-      data: resultado.idea
-    });
+    if (!grupo || !grupo.codigo_materia || !grupo.nombre || !grupo.periodo || !grupo.anio) {
+      return res.status(400).json({
+        message: "Los datos del grupo son obligatorios (codigo_materia, nombre, periodo, anio)."
+      });
+    }
+
+    const resultado = await IdeaService.adoptarIdea(id_idea, codigo_usuario, grupo);
+
+    return res.status(200).json(resultado);
   } catch (error) {
     console.error("Error al adoptar idea:", error);
-    res.status(500).json({
-      ok: false,
-      mensaje: "Error al adoptar la idea",
+    return res.status(500).json({
+      message: "Error al adoptar la idea.",
       error: error.message
     });
   }
@@ -355,8 +360,6 @@ async function listarIdeasGrupo(req, res) {
         });
     }
 }
-
-
 
 async function moverIdeaAlBancoPorDecision(req, res) {
   try {

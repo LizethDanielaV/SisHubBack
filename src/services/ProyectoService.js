@@ -9,7 +9,40 @@ import Item from "../models/Item.js";
 import TipoAlcance from "../models/TipoAlcance.js";
 import Equipo from "../models/Equipo.js";
 import HistorialProyecto from "../models/HistorialProyecto.js";
+import Entregable from "../models/Entregable.js"; 
+import Esquema from "../models/Esquema.js";
 import db from "../db/db.js";
+
+function construirJerarquiaItems(items) {
+    const itemsMap = new Map();
+    const raices = [];
+
+    // Crear mapa de items
+    items.forEach(item => {
+        itemsMap.set(item.id_item, {
+            id_item: item.id_item,
+            nombre: item.nombre,
+            super_item: item.super_item,
+            hijos: []
+        });
+    });
+
+    // Construir jerarquía
+    items.forEach(item => {
+        const nodo = itemsMap.get(item.id_item);
+        
+        if (item.super_item === null) {
+            raices.push(nodo);
+        } else {
+            const padre = itemsMap.get(item.super_item);
+            if (padre) {
+                padre.hijos.push(nodo);
+            }
+        }
+    });
+
+    return raices;
+}
 
 async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -48,7 +81,14 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
                 {
                     model: TipoAlcance,
                     as: "Tipo_alcance",
-                    attributes: ["id_tipo_alcance", "nombre"]
+                    attributes: ["id_tipo_alcance", "nombre"],
+                    include: [
+                        {
+                            model: Esquema,
+                            as: "Esquemas",
+                            attributes: ["id_esquema", "ubicacion"]
+                        }
+                    ]
                 }
             ]
         });
@@ -61,21 +101,28 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             throw new Error("La actividad no tiene un tipo de alcance definido");
         }
 
-        const itemsActividad = await ActividadItem.findAll({
-            where: { id_actividad: actividad.id_actividad },
-            include: [
-                {
-                    model: Item,
-                    as: "Item",
-                    attributes: ["id_item", "nombre", "super_item", "id_esquema"]
-                }
-            ]
-        });
-
-        if (!itemsActividad || itemsActividad.length === 0) {
-            throw new Error("La actividad no tiene ítems de esquema seleccionados");
+        // Obtener el esquema del tipo de alcance
+        const esquemas = actividad.Tipo_alcance.Esquemas;
+        
+        if (!esquemas || esquemas.length === 0) {
+            throw new Error("El tipo de alcance no tiene esquemas asociados");
         }
 
+        // Tomar el primer esquema (o puedes agregar lógica para seleccionar uno específico)
+        const esquemaSeleccionado = esquemas[0];
+
+        // Obtener TODOS los ítems del esquema completo
+        const itemsEsquema = await Item.findAll({
+            where: { id_esquema: esquemaSeleccionado.id_esquema },
+            attributes: ["id_item", "nombre", "super_item", "id_esquema"],
+            order: [["id_item", "ASC"]]
+        });
+
+        if (!itemsEsquema || itemsEsquema.length === 0) {
+            throw new Error("El esquema no tiene ítems definidos");
+        }
+
+        // Validaciones
         if (!linea_investigacion || linea_investigacion.trim().length === 0) {
             throw new Error("La línea de investigación es obligatoria");
         }
@@ -92,6 +139,7 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             throw new Error("Las palabras clave no pueden exceder 150 caracteres");
         }
 
+        // Crear el proyecto
         const nuevoProyecto = await Proyecto.create({
             linea_investigacion,
             tecnologias: tecnologias || null,
@@ -100,6 +148,7 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             id_tipo_alcance: actividad.id_tipo_alcance
         }, { transaction });
 
+        // Obtener el equipo
         const equipo = await Equipo.findOne({
             where: {
                 codigo_materia: idea.codigo_materia,
@@ -109,21 +158,33 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             }
         });
 
+        // Registrar en historial
         await HistorialProyecto.create({
             id_proyecto: nuevoProyecto.id_proyecto,
-            id_estado: idea.id_estado, // Mismo estado de la idea (APROBADO)
+            id_estado: idea.id_estado,
             codigo_usuario: codigo_usuario,
-            observacion: `Proyecto creado a partir de la idea aprobada ID: ${id_idea}. Tipo de alcance: ${actividad.Tipo_alcance.nombre}. Items del esquema adoptados: ${itemsActividad.length}`
+            observacion: `Proyecto creado a partir de la idea aprobada "${idea.titulo}". Tipo de alcance: ${actividad.Tipo_alcance.nombre}. Esquema adoptado: ${esquemaSeleccionado.id_esquema} con ${itemsEsquema.length} ítems.`
         }, { transaction });
 
         await transaction.commit();
 
+        // Obtener proyecto completo
         const proyectoCompleto = await Proyecto.findByPk(nuevoProyecto.id_proyecto, {
             include: [
                 {
                     model: Idea,
                     as: "Idea",
-                    attributes: ["id_idea", "titulo", "problema", "objetivo_general", "codigo_usuario"],
+                    attributes: [
+                        "id_idea", 
+                        "titulo", 
+                        "problema", 
+                        "objetivo_general", 
+                        "codigo_materia",
+                        "nombre",
+                        "periodo",
+                        "anio",
+                        "codigo_usuario"
+                    ],
                     include: [
                         {
                             model: Usuario,
@@ -140,6 +201,9 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             ]
         });
 
+        // Construir estructura jerárquica de ítems (padres e hijos)
+        const itemsJerarquicos = construirJerarquiaItems(itemsEsquema);
+
         return {
             ...proyectoCompleto.toJSON(),
             equipo: equipo ? {
@@ -147,16 +211,21 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
                 descripcion: equipo.descripcion
             } : null,
             esquema_adoptado: {
-                total_items: itemsActividad.length,
-                items: itemsActividad.map(ai => ({
-                    id_item: ai.Item.id_item,
-                    nombre: ai.Item.nombre,
-                    id_esquema: ai.Item.id_esquema
-                }))
+                id_esquema: esquemaSeleccionado.id_esquema,
+                ubicacion: esquemaSeleccionado.ubicacion,
+                total_items: itemsEsquema.length,
+                items: itemsEsquema.map(item => ({
+                    id_item: item.id_item,
+                    nombre: item.nombre,
+                    super_item: item.super_item,
+                    id_esquema: item.id_esquema
+                })),
+                items_jerarquicos: itemsJerarquicos
             },
             actividad: {
                 id_actividad: actividad.id_actividad,
-                titulo: actividad.titulo
+                titulo: actividad.titulo,
+                tipo_alcance: actividad.Tipo_alcance.nombre
             }
         };
 
@@ -174,7 +243,19 @@ async function obtenerProyectoPorId(idProyecto) {
             {
                 model: Idea,
                 as: "Idea",
-                attributes: ["id_idea", "titulo", "problema", "objetivo_general", "justificacion", "objetivos_especificos", "codigo_materia", "nombre", "periodo", "anio"],
+                attributes: [
+                    "id_idea", 
+                    "titulo", 
+                    "problema", 
+                    "objetivo_general", 
+                    "justificacion", 
+                    "objetivos_especificos", 
+                    "codigo_materia", 
+                    "nombre", 
+                    "periodo", 
+                    "anio",
+                    "codigo_usuario"
+                ],
                 include: [
                     {
                         model: Usuario,
@@ -201,6 +282,8 @@ async function obtenerProyectoPorId(idProyecto) {
     }
 
     const idea = proyecto.Idea;
+
+    // Obtener el equipo
     const equipo = await Equipo.findOne({
         where: {
             codigo_materia: idea.codigo_materia,
@@ -223,6 +306,7 @@ async function obtenerProyectoPorId(idProyecto) {
         ]
     });
 
+    // Obtener historial del proyecto
     const historial = await HistorialProyecto.findAll({
         where: { id_proyecto: idProyecto },
         include: [
@@ -240,10 +324,128 @@ async function obtenerProyectoPorId(idProyecto) {
         order: [["fecha", "DESC"]]
     });
 
+    // ===== LÓGICA PARA OBTENER EL ESQUEMA =====
+    let esquemaInfo = null;
+    let actividadReferencia = null;
+
+    // 1. Buscar el último entregable del proyecto
+    const ultimoEntregable = await Entregable.findOne({
+        where: { id_proyecto: idProyecto },
+        include: [
+            {
+                model: Actividad,
+                as: "actividad",
+                attributes: ["id_actividad", "titulo", "codigo_materia", "nombre", "periodo", "anio"],
+                include: [
+                    {
+                        model: TipoAlcance,
+                        as: "Tipo_alcance",
+                        attributes: ["id_tipo_alcance", "nombre"],
+                        include: [
+                            {
+                                model: Esquema,
+                                as: "Esquemas",
+                                attributes: ["id_esquema", "ubicacion"]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        order: [["fecha_subida", "DESC"]],
+        limit: 1
+    });
+
+    if (ultimoEntregable && ultimoEntregable.actividad) {
+        actividadReferencia = ultimoEntregable.actividad;
+        esquemaInfo = {
+            origen: "ultimo_entregable",
+            mensaje: "Esquema del último entregable realizado"
+        };
+    } else {
+        const actividadActual = await Actividad.findOne({
+            where: {
+                codigo_materia: idea.codigo_materia,
+                nombre: idea.nombre,
+                periodo: idea.periodo,
+                anio: idea.anio
+            },
+            include: [
+                {
+                    model: TipoAlcance,
+                    as: "Tipo_alcance",
+                    attributes: ["id_tipo_alcance", "nombre"],
+                    include: [
+                        {
+                            model: Esquema,
+                            as: "Esquemas",
+                            attributes: ["id_esquema", "ubicacion"]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (actividadActual) {
+            actividadReferencia = actividadActual;
+            esquemaInfo = {
+                origen: "actividad_actual",
+                mensaje: "Esquema de la actividad actual (sin entregables aún)"
+            };
+        }
+    }
+
+    let esquemaCompleto = null;
+
+    if (actividadReferencia && actividadReferencia.Tipo_alcance) {
+        const esquemas = actividadReferencia.Tipo_alcance.Esquemas;
+
+        if (esquemas && esquemas.length > 0) {
+            const esquemaSeleccionado = esquemas[0];
+
+            const itemsEsquema = await Item.findAll({
+                where: { id_esquema: esquemaSeleccionado.id_esquema },
+                attributes: ["id_item", "nombre", "super_item", "id_esquema"],
+                order: [["id_item", "ASC"]]
+            });
+
+            if (itemsEsquema && itemsEsquema.length > 0) {
+                // Construir jerarquía
+                const itemsJerarquicos = construirJerarquiaItems(itemsEsquema);
+
+                esquemaCompleto = {
+                    ...esquemaInfo,
+                    id_esquema: esquemaSeleccionado.id_esquema,
+                    ubicacion: esquemaSeleccionado.ubicacion,
+                    tipo_alcance: actividadReferencia.Tipo_alcance.nombre,
+                    actividad: {
+                        id_actividad: actividadReferencia.id_actividad,
+                        titulo: actividadReferencia.titulo,
+                        grupo: {
+                            codigo_materia: actividadReferencia.codigo_materia,
+                            nombre: actividadReferencia.nombre,
+                            periodo: actividadReferencia.periodo,
+                            anio: actividadReferencia.anio
+                        }
+                    },
+                    total_items: itemsEsquema.length,
+                    items: itemsEsquema.map(item => ({
+                        id_item: item.id_item,
+                        nombre: item.nombre,
+                        super_item: item.super_item,
+                        id_esquema: item.id_esquema
+                    })),
+                    items_jerarquicos: itemsJerarquicos
+                };
+            }
+        }
+    }
+
     return {
         ...proyecto.toJSON(),
         equipo: equipo ? equipo.toJSON() : null,
-        historial
+        historial,
+        esquema_actual: esquemaCompleto
     };
 }
 
@@ -293,7 +495,6 @@ async function listarProyectosPorGrupo(datosGrupo) {
 
     return proyectos;
 }
-
 
 async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario) {
     const transaction = await db.transaction();
@@ -365,7 +566,6 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
-    listarProyectos,
     listarProyectosPorGrupo,
     actualizarProyecto
 };
