@@ -2,6 +2,7 @@ import db from "../db/db.js";
 import { DataTypes } from "sequelize";
 import Idea from "./Idea.js";
 import TipoAlcance from "./TipoAlcance.js";
+import Estado from "./Estado.js";
 
 const Proyecto = db.define("proyecto", {
     id_proyecto: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -32,5 +33,11 @@ TipoAlcance.hasMany(Proyecto, {
 Proyecto.belongsTo(TipoAlcance, {
     foreignKey: "id_tipo_alcance"
 });
+
+
+//Relacion con estado
+Estado.hasMany(Proyecto, { foreignKey: "id_estado" });
+Proyecto.belongsTo(Estado, { foreignKey: "id_estado" });
+
 export default Proyecto;
 

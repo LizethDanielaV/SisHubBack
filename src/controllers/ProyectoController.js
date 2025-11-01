@@ -162,8 +162,31 @@ async function actualizarProyecto(req, res) {
     }
 }
 
+async function listarParaDirector(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarProyectosDirector();
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+async function listarParaDirector(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarProyectosDirector();
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
-    actualizarProyecto
+    actualizarProyecto, 
+    listarParaDirector
 };

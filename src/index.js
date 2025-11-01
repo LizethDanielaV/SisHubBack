@@ -16,6 +16,7 @@ import TipoAlcanceRoutes from "./routes/TipoAlcanceRoutes.js";
 import IdeaRoutes from "./routes/IdeaRoutes.js";
 import EntregableRoutes from "./routes/EntregableRoutes.js";
 import ProyectoRoutes from "./routes/ProyectoRoutes.js";
+
 dotenv.config();
 
 
@@ -46,8 +47,19 @@ app.use(cors({
 app.use(express.json());
 
 // Conectar DB
-testConnection();
-// createTables();
+testConnection()
+/*
+async function actualizarTabla() {
+  try {
+    await HistorialProyecto.sync({ alter: true });
+    console.log("tabla actualizada correctamente")
+  } catch (error) {
+    console.log('Error al sincronizar la tabla historial: ' + error.message);
+  }
+};
+
+actualizarTabla();*/
+
 
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);

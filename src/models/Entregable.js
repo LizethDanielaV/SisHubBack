@@ -9,7 +9,7 @@ const Entregable = db.define("entregable", {
     id_entregable: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     tipo: { type: DataTypes.STRING(100), allowNull: false },
     nombre_archivo: { type: DataTypes.STRING(200) },
-    url_archivo: { type: DataTypes.STRING(255) },
+    url_archivo: { type: DataTypes.STRING(500) },
     comentarios: { type: DataTypes.STRING(200) },
     fecha_subida: { 
         type: DataTypes.DATE,
