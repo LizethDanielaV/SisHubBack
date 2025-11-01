@@ -294,6 +294,28 @@ async function listarIdeasLibres(req, res) {
     }
 }
 
+async function adoptarIdea(req, res) {
+  try {
+    const { id_idea } = req.params;
+    const datosAdopcion = req.body;
+
+    const resultado = await IdeaService.adoptarIdea(id_idea, datosAdopcion);
+
+    res.status(200).json({
+      ok: true,
+      mensaje: resultado.message,
+      data: resultado.idea
+    });
+  } catch (error) {
+    console.error("Error al adoptar idea:", error);
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al adoptar la idea",
+      error: error.message
+    });
+  }
+}
+
 // ahorita continua...
 async function listarIdeasGrupo(req, res) {
     try {
@@ -334,4 +356,4 @@ async function listarIdeasGrupo(req, res) {
     }
 }
 
-export default { revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, listarIdeasGrupo };
+export default { revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, adoptarIdea, listarIdeasGrupo };
