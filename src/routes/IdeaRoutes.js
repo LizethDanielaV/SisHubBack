@@ -14,4 +14,6 @@ router.put("/actualizar/:id", IdeaController.actualizarIdea);
 router.get("/:id", IdeaController.obtenerIdea);
 router.put("/:id_idea/revisar", verificarToken, verificarRol([2]), IdeaController.revisarIdea);
 
+router.put("/:id_idea/no-corregir", verificarToken, verificarRol([3]), IdeaController.moverIdeaAlBancoPorDecision
+);
 export default router;
