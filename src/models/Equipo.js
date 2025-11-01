@@ -10,6 +10,7 @@ const Equipo = db.define("equipo", {
     nombre: { type: DataTypes.STRING(1), allowNull: false },
     periodo: { type: DataTypes.STRING(2), allowNull: false },
     anio: { type: DataTypes.INTEGER, allowNull: false },
+    estado: { type: DataTypes.BOOLEAN, allowNull: false , defaultValue: true}
 }, {
     timestamps: false,
     freezeTableName: true
