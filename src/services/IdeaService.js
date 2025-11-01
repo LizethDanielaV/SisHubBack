@@ -139,7 +139,7 @@ async function crearIdea(datosIdea) {
 
         // 7. Crear el equipo asociado a la idea
         const nuevoEquipo = await Equipo.create({
-            descripcion: `Equipo - ${titulo}`,
+            descripcion: `Equipo - ${codigo_usuario}`,
             codigo_materia: grupo.codigo_materia,
             nombre: grupo.nombre,
             periodo: grupo.periodo,
@@ -571,27 +571,10 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
         const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
         if (!estadoStandBy) throw new Error("No se encontró el estado STAND_BY");
 
-        const equipoExistente = await Equipo.findOne({
-            where: {
-                codigo_materia: grupo.codigo_materia,
-                nombre: grupo.nombre,
-                periodo: grupo.periodo,
-                anio: grupo.anio,
-                estado: true
-            },
-            include: [
-                {
-                    model: IntegranteEquipo,
-                    where: { codigo_usuario, es_lider: true },
-                    required: false
-                }
-            ],
-            transaction: t
-        });
-
+        // Crear equipo nuevo (siempre que adopta crea uno)
         const equipoAsociado = await Equipo.create(
             {
-                descripcion: `Equipo de ${codigo_usuario}`,
+                descripcion: `Equipo - ${codigo_usuario}`, 
                 codigo_materia: grupo.codigo_materia,
                 nombre: grupo.nombre,
                 periodo: grupo.periodo,
@@ -612,6 +595,7 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
             { transaction: t }
         );
 
+        // Actualizar la idea
         await idea.update(
             {
                 id_estado: estadoStandBy.id_estado,
@@ -620,6 +604,17 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
                 nombre: grupo.nombre,
                 periodo: grupo.periodo,
                 anio: grupo.anio
+            },
+            { transaction: t }
+        );
+
+        await HistorialIdea.create(
+            {
+                fecha: new Date(),
+                observacion: `Idea adoptada por el estudiante con código ${codigo_usuario}`,
+                id_estado: estadoStandBy.id_estado,
+                id_idea,
+                codigo_usuario
             },
             { transaction: t }
         );
