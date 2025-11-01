@@ -563,9 +563,29 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
     }
 }
 
+async function listarProyectosDirector(){
+    try {
+    const proyectos = await Proyecto.findAll({
+     attributes: ['codigo', 'nombre', 'semestre'],
+      include: [{
+        model: TipoAlcance,
+        attributes: ['nombre']
+      }, {
+        model: Idea, 
+        attributes: ['objetivo_general']
+      }],
+    });
+    return proyectos;
+  } catch (error) {
+    throw new Error("Error al obtener los proyectos " + error.message);
+  }
+}
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
     listarProyectosPorGrupo,
-    actualizarProyecto
+    actualizarProyecto, 
+    listarProyectosDirector
 };
+
