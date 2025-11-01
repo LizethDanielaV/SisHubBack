@@ -523,6 +523,98 @@ async function listarIdeasLibres() {
     }
 }
 
+async function adoptarIdea(id_idea, datosAdopcion) {
+  const transaction = await db.transaction();
+
+  try {
+    const { codigo_usuario, grupo } = datosAdopcion;
+
+    const idea = await Idea.findByPk(id_idea, {
+      include: [{ model: Estado, as: "Estado" }]
+    });
+
+    if (!idea) {
+      throw new Error("Idea no encontrada");
+    }
+
+    if (idea.Estado.descripcion !== "LIBRE") {
+      throw new Error("La idea no está disponible para adopción");
+    }
+
+    const usuario = await Usuario.findOne({ where: { codigo: codigo_usuario } });
+    if (!usuario) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    if (usuario.id_rol !== 3) {
+      throw new Error("Solo los estudiantes pueden adoptar ideas");
+    }
+
+    const grupoExiste = await Grupo.findOne({
+      where: {
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio,
+        estado: true
+      }
+    });
+
+    if (!grupoExiste) {
+      throw new Error("El grupo especificado no existe o no está habilitado");
+    }
+
+    const pertenece = await GrupoUsuario.findOne({
+      where: {
+        codigo_usuario,
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio,
+        estado: true
+      }
+    });
+
+    if (!pertenece) {
+      throw new Error("El estudiante no pertenece al grupo seleccionado");
+    }
+
+    const estadoStandBy = await Estado.findOne({
+      where: { descripcion: "STAND_BY" }
+    });
+
+    if (!estadoStandBy) {
+      throw new Error("Estado STAND_BY no encontrado");
+    }
+
+    await idea.update({
+      id_estado: estadoStandBy.id_estado,
+      codigo_usuario,
+      codigo_materia: grupo.codigo_materia,
+      nombre: grupo.nombre,
+      periodo: grupo.periodo,
+      anio: grupo.anio
+    }, { transaction });
+
+    await HistorialIdea.create({
+      id_idea,
+      id_estado: estadoStandBy.id_estado,
+      codigo_usuario,
+      observacion: `Idea adoptada por el estudiante ${codigo_usuario} y asignada al grupo ${grupo.codigo_materia}-${grupo.nombre}-${grupo.periodo}-${grupo.anio}`
+    }, { transaction });
+
+    await transaction.commit();
+
+    return { message: "Idea adoptada exitosamente", idea };
+
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    throw new Error("Error al adoptar la idea: " + error.message);
+  }
+}
+
 async function listarIdeasPorGrupo(datosGrupo) {
     const ideas = await Idea.findAll({
         where: {
@@ -607,4 +699,4 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
     }
 }
 
-export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, listarIdeasPorGrupo, revisarIdea };
+export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea };
