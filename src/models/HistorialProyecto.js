@@ -3,6 +3,7 @@
     import Estado from "./Estado.js";
     import Proyecto from "./Proyecto.js";
     import Usuario from "./Usuario.js";
+    import Equipo from "./Equipo.js";
 
     const HistorialProyecto = db.define("Historial_Proyecto", {
         id_historial_proyecto: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -36,5 +37,8 @@
 
     Usuario.hasMany(HistorialProyecto, { foreignKey: "codigo_usuario" });
     HistorialProyecto.belongsTo(Usuario, { foreignKey: "codigo_usuario" });
+
+    Equipo.hasMany(HistorialProyecto, { foreignKey: "id_equipo" });
+    HistorialProyecto.belongsTo(Equipo, { foreignKey: "id_equipo" });
 
     export default HistorialProyecto;
