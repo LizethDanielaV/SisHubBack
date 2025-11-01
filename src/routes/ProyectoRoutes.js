@@ -9,5 +9,6 @@ router.get("/grupo/listar", verificarToken, ProyectoController.listarProyectosPo
 router.post("/crear/:id", verificarToken, ProyectoController.crearProyectoDesdeIdea);
 router.get("/:id", /* verificarToken, */ ProyectoController.obtenerProyecto);
 router.patch("/:id", /* verificarToken,  */ProyectoController.actualizarProyecto);
+router.put("/revisar", verificarToken, verificarRol([2]), ProyectoController.revisarProyecto);
 
 export default router;

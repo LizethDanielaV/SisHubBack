@@ -201,9 +201,35 @@ async function actualizarProyecto(req, res) {
     }
 }
 
+export const revisarProyecto = async (req, res) => {
+  try {
+    const { id_proyecto, accion, observacion, codigo_usuario } = req.body;
+
+    if (!id_proyecto || !accion || !codigo_usuario) {
+      return res.status(400).json({
+        message: "Faltan datos obligatorios: id_proyecto, accion o codigo_usuario.",
+      });
+    }
+
+    const resultado = await ProyectoService.revisarProyecto(
+      id_proyecto,
+      accion,
+      observacion,
+      codigo_usuario
+    );
+
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al revisar el proyecto.",
+      error: error.message,
+    });
+  }
+};
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
     listarProyectosPorGrupo,
-    actualizarProyecto
+    actualizarProyecto, revisarProyecto
 };
