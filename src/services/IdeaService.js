@@ -13,13 +13,13 @@ async function crearIdea(datosIdea) {
     let idIdeaCreada = null;
 
     try {
-        const { 
-            titulo, 
-            problema, 
-            justificacion, 
-            objetivo_general, 
-            objetivos_especificos, 
-            grupo, 
+        const {
+            titulo,
+            problema,
+            justificacion,
+            objetivo_general,
+            objetivos_especificos,
+            grupo,
             integrantes,
             codigo_usuario
         } = datosIdea;
@@ -392,7 +392,7 @@ async function actualizarIdea(idIdea, datosActualizacion) {
         };
     }
 }
-      
+
 
 async function obtenerIdeaPorId(idIdea) {
     // 1. Obtener la idea con sus relaciones simples
@@ -481,25 +481,46 @@ async function obtenerIdeaPorId(idIdea) {
     };
 }
 
-async function listarIdeasUsuario(codigoUsuario) {
-    const ideas = await Idea.findAll({
-        where: { codigo_usuario: codigoUsuario },
-        include: [
-            {
-                model: Estado,
-                as: "Estado",
-                attributes: ["descripcion"]
-            },
-            {
-                model: Grupo,
-                as: "Grupo",
-                attributes: ["codigo_materia", "nombre", "periodo", "anio"]
-            }
-        ],
-        order: [["id_idea", "DESC"]]
-    });
+async function listarIdeasLibres() {
+    try {
+        const estadoLibre = await Estado.findOne({
+            where: { descripcion: "LIBRE" },
+            attributes: ["id_estado"]
+        });
 
-    return ideas;
+        if (!estadoLibre) {
+            throw new Error("No se encontró el estado 'LIBRE' en la base de datos");
+        }
+
+        const ideasLibres = await Idea.findAll({
+            where: { id_estado: estadoLibre.id_estado },
+            attributes: [
+                "id_idea",
+                "titulo",
+                "problema",
+                "justificacion",
+                "objetivo_general",
+                "objetivos_especificos",
+                "codigo_materia",
+                "nombre",
+                "periodo",
+                "anio"
+            ],
+            include: [
+                {
+                    model: Estado,
+                    as: "Estado",
+                    attributes: ["descripcion"]
+                }
+            ],
+            order: [["id_idea", "DESC"]]
+        })
+
+        return ideasLibres;
+    } catch (error) {
+        console.error("Error al listar ideas LIBRES:", error);
+        throw new Error("No fue posible listar las ideas con estado LIBRE");
+    }
 }
 
 async function listarIdeasPorGrupo(datosGrupo) {
@@ -529,61 +550,61 @@ async function listarIdeasPorGrupo(datosGrupo) {
 }
 
 async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
-  try {
-    const idea = await Idea.findByPk(id_idea);
+    try {
+        const idea = await Idea.findByPk(id_idea);
 
-    if (!idea) throw new Error("Idea no encontrada");
+        if (!idea) throw new Error("Idea no encontrada");
 
-    // Validar acción permitida
-    const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
-    if (!accionesValidas.includes(accion)) {
-      throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
+        // Validar acción permitida
+        const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
+        if (!accionesValidas.includes(accion)) {
+            throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
+        }
+
+        // Cambiar estado según la acción
+        let nuevoEstado;
+        let mensaje;
+
+        switch (accion) {
+            case "Aprobar":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "APROBADO" } });
+                mensaje = "Idea aprobada sin observaciones.";
+                break;
+
+            case "Aprobar_Con_Observacion":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
+                mensaje = "Idea aprobada con observaciones. En espera de corrección del estudiante.";
+                break;
+
+            case "Rechazar":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" } });
+                mensaje = "Idea rechazada. El estudiante deberá crear una nueva propuesta.";
+                break;
+        }
+
+        if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
+
+        // Actualizar la idea
+        idea.id_estado = nuevoEstado.id_estado;
+        await idea.save();
+
+        // Registrar en historial
+        const textoObservacion = observacion
+            ? `${mensaje} Observaciones: ${observacion}`
+            : mensaje;
+
+        await HistorialIdea.create({
+            fecha: new Date(),
+            observacion: textoObservacion,
+            id_estado: nuevoEstado.id_estado,
+            id_idea,
+            codigo_usuario
+        });
+
+        return { message: mensaje, idea };
+    } catch (error) {
+        throw new Error("Error al revisar la idea: " + error.message);
     }
-
-    // Cambiar estado según la acción
-    let nuevoEstado;
-    let mensaje;
-
-    switch (accion) {
-      case "Aprobar":
-        nuevoEstado = await Estado.findOne({ where: { descripcion: "APROBADO" } });
-        mensaje = "Idea aprobada sin observaciones.";
-        break;
-
-      case "Aprobar_Con_Observacion":
-        nuevoEstado = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
-        mensaje = "Idea aprobada con observaciones. En espera de corrección del estudiante.";
-        break;
-
-      case "Rechazar":
-        nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" } });
-        mensaje = "Idea rechazada. El estudiante deberá crear una nueva propuesta.";
-        break;
-    }
-
-    if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
-
-    // Actualizar la idea
-    idea.id_estado = nuevoEstado.id_estado;
-    await idea.save();
-
-    // Registrar en historial
-    const textoObservacion = observacion
-      ? `${mensaje} Observaciones: ${observacion}`
-      : mensaje;
-
-    await HistorialIdea.create({
-      fecha: new Date(),
-      observacion: textoObservacion,
-      id_estado: nuevoEstado.id_estado,
-      id_idea,
-      codigo_usuario
-    });
-
-    return { message: mensaje, idea };
-  } catch (error) {
-    throw new Error("Error al revisar la idea: " + error.message);
-  }
 }
 
-export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasUsuario, listarIdeasPorGrupo, revisarIdea };
+export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, listarIdeasPorGrupo, revisarIdea };
