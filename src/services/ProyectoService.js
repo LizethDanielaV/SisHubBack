@@ -12,7 +12,9 @@ import HistorialProyecto from "../models/HistorialProyecto.js";
 import Entregable from "../models/Entregable.js"; 
 import Esquema from "../models/Esquema.js";
 import db from "../db/db.js";
-
+import Grupo from "../models/Grupo.js";
+import Materia from "../models/Materia.js";
+import { Op } from 'sequelize';
 function construirJerarquiaItems(items) {
     const itemsMap = new Map();
     const raices = [];
@@ -448,7 +450,7 @@ async function obtenerProyectoPorId(idProyecto) {
         esquema_actual: esquemaCompleto
     };
 }
-
+/*
 async function listarProyectosPorGrupo(datosGrupo) {
     // Primero obtenemos las ideas de ese grupo
     const ideas = await Idea.findAll({
@@ -494,7 +496,7 @@ async function listarProyectosPorGrupo(datosGrupo) {
     });
 
     return proyectos;
-}
+}*/
 
 async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario) {
     const transaction = await db.transaction();
@@ -566,7 +568,6 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
 async function listarProyectosDirector(){
     try {
     const proyectos = await Proyecto.findAll({
-     attributes: ['codigo', 'nombre', 'semestre'],
       include: [{
         model: TipoAlcance,
         attributes: ['nombre']
@@ -581,11 +582,232 @@ async function listarProyectosDirector(){
   }
 }
 
+async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
+  try {
+    const proyectos = await Proyecto.findAll({
+      attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
+      include: [
+        {
+          model: TipoAlcance,
+          attributes: ['nombre']
+        },
+        {
+          model: Idea,
+          attributes: ['titulo', 'objetivo_general']
+        },
+        {
+            model: Entregable,
+            attributes: ['id_entregable'],
+            include: [
+                {
+                    model: Actividad,
+                    attributes: ['id_actividad'],
+                    include: [{
+                        model: Grupo, 
+                        on: {
+                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
+                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
+                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
+                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
+                  },
+                        attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                        include: [{
+                            model: Materia, 
+                            attributes: ['nombre']
+                        }]
+                    }
+                    ]
+                }
+            ]
+        },
+        {
+          model: HistorialProyecto,
+          required: true,
+          attributes: [],
+          include: [
+            {
+              model: Equipo,
+              required: true,
+              attributes: [],
+              include: [
+                {
+                  model: IntegrantesEquipo,
+                  required: true,
+                  attributes: [],
+                  include: [
+                    {
+                      model: Usuario,
+                      attributes: ['codigo'],
+                      where: {
+                        codigo: codigoEstudiante
+                      },
+                      required: true
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    return proyectos;
+  } catch (error) {
+    throw new Error("Error al obtener los proyectos: " + error.message);
+  }
+}
+
+async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
+  try {
+    const proyectos = await Proyecto.findAll({
+      attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
+      include: [
+        {
+          model: TipoAlcance,
+          attributes: ['nombre']
+        },
+        {
+          model: Idea,
+          attributes: ['titulo', 'objetivo_general']
+        },
+        {
+            model: Entregable,
+            attributes: ['id_entregable'],
+            include: [
+                {
+                    model: Actividad,
+                    attributes: ['id_actividad'],
+                    include: [{
+                        model: Grupo, 
+                        on: {
+                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
+                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
+                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
+                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
+                  },
+                        attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                        include: [{
+                            model: Materia, 
+                            attributes: ['nombre']
+                        }]
+                    }
+                    ]
+                }
+            ]
+        },
+        {
+          model: HistorialProyecto,
+          required: true,
+          attributes: [],
+          include: [
+            {
+              model: Usuario,
+              required: true,
+              attributes: [],
+              where: {
+                        codigo: codigoProfesor
+                      },
+              required: true
+            }
+          ]
+        }
+      ]
+    });
+    const resultado = proyectos.map(proyecto => {
+      // obtener materias asociadas (sin duplicados)
+      const materias = [];
+
+      proyecto.entregables?.forEach(entregable => {
+        const materia = entregable.actividad?.Grupo?.Materium;
+        if (materia && materia.nombre && !materias.some(m => m.nombre === materia.nombre)) {
+          materias.push({ nombre: materia.nombre });
+        }
+      });
+
+      return {
+        id_proyecto: proyecto.id_proyecto,
+        linea_investigacion: proyecto.linea_investigacion,
+        tecnologias: proyecto.tecnologias,
+        fecha_creacion: proyecto.fecha_creacion,
+        Tipo_alcance: proyecto.TipoAlcance,
+        Idea: proyecto.Idea,
+        materias: materias
+      };
+    });
+    return resultado;
+  } catch (error) {
+    throw new Error("Error al obtener los proyectos: " + error.message);
+  }
+}
+
+async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, anio) {
+  try {
+    const proyectos = await Proyecto.findAll({
+      attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
+      include: [
+        {
+          model: TipoAlcance,
+          attributes: ['nombre']
+        },
+        {
+          model: Idea,
+          attributes: ['titulo', 'objetivo_general']
+        },
+        {
+          model: Entregable,
+          attributes: ['id_entregable'],
+          include: [
+            {
+              model: Actividad,
+              attributes: ['id_actividad'],
+              include: [
+                {
+                  model: Grupo,
+                  attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                  on: {
+                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.codigo_materia') },
+                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.nombre') },
+                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.periodo') },
+                    '$entregables.actividad.anio$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.anio') }
+                  },
+                  where: {
+                    codigo_materia: codigoMateria,
+                    nombre: nombre,
+                    periodo: periodo,
+                    anio: anio
+                  },
+                  required: true 
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    const resultado = proyectos.map(p => ({
+      id_proyecto: p.id_proyecto,
+      linea_investigacion: p.linea_investigacion,
+      tecnologias: p.tecnologias,
+      fecha_creacion: p.fecha_creacion,
+      Tipo_alcance: p.TipoAlcance, 
+      Idea: p.Idea 
+    }));
+    return resultado;
+  } catch (error) {
+    throw new Error("Error al obtener los proyectos: " + error.message);
+  }
+}
+
+
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
-    listarProyectosPorGrupo,
+    /*listarProyectosPorGrupo,*/
     actualizarProyecto, 
-    listarProyectosDirector
+    listarProyectosDirector, 
+    listarTodosProyectosDeUnEstudiante,
+    listarTodosProyectosDeUnProfesor, 
+    listarTodosProyectosDeUnGrupo
 };
 
