@@ -316,8 +316,8 @@ async function actualizarIdea(idIdea, datosActualizacion) {
             throw new Error("No se encontró la actividad asociada");
         }
 
-        if (datosActualizacion.integrantes_agregar && Array.isArray(datosActualizacion.integrantes_agregar)) {
-            const integrantesAgregar = datosActualizacion.integrantes_agregar;
+        if (datosActualizacion.integrantes && Array.isArray(datosActualizacion.integrantes)) {
+            const integrantesAgregar = datosActualizacion.integrantes;
 
             // Contar integrantes actuales del equipo
             const integrantesActuales = await IntegranteEquipo.count({

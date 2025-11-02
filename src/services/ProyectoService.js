@@ -269,10 +269,6 @@ async function obtenerProyectoPorId(idProyecto) {
         order: [["fecha", "DESC"]]
     });
 
-    // ===== LÓGICA PARA OBTENER EL ESQUEMA =====
-    let esquemaInfo = null;
-    let actividadReferencia = null;
-
     // 1. Buscar el último entregable del proyecto
     const ultimoEntregable = await Entregable.findOne({
         where: { id_proyecto: idProyecto },
