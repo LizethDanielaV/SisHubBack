@@ -9,12 +9,14 @@ import Item from "../models/Item.js";
 import TipoAlcance from "../models/TipoAlcance.js";
 import Equipo from "../models/Equipo.js";
 import HistorialProyecto from "../models/HistorialProyecto.js";
-import Entregable from "../models/Entregable.js"; 
+import Entregable from "../models/Entregable.js";
 import Esquema from "../models/Esquema.js";
+import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import db from "../db/db.js";
 import Grupo from "../models/Grupo.js";
 import Materia from "../models/Materia.js";
 import { Op } from 'sequelize';
+
 function construirJerarquiaItems(items) {
     const itemsMap = new Map();
     const raices = [];
@@ -32,7 +34,7 @@ function construirJerarquiaItems(items) {
     // Construir jerarquía
     items.forEach(item => {
         const nodo = itemsMap.get(item.id_item);
-        
+
         if (item.super_item === null) {
             raices.push(nodo);
         } else {
@@ -105,7 +107,7 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
 
         // Obtener el esquema del tipo de alcance
         const esquemas = actividad.Tipo_alcance.Esquemas;
-        
+
         if (!esquemas || esquemas.length === 0) {
             throw new Error("El tipo de alcance no tiene esquemas asociados");
         }
@@ -177,10 +179,10 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
                     model: Idea,
                     as: "Idea",
                     attributes: [
-                        "id_idea", 
-                        "titulo", 
-                        "problema", 
-                        "objetivo_general", 
+                        "id_idea",
+                        "titulo",
+                        "problema",
+                        "objetivo_general",
                         "codigo_materia",
                         "nombre",
                         "periodo",
@@ -246,15 +248,15 @@ async function obtenerProyectoPorId(idProyecto) {
                 model: Idea,
                 as: "Idea",
                 attributes: [
-                    "id_idea", 
-                    "titulo", 
-                    "problema", 
-                    "objetivo_general", 
-                    "justificacion", 
-                    "objetivos_especificos", 
-                    "codigo_materia", 
-                    "nombre", 
-                    "periodo", 
+                    "id_idea",
+                    "titulo",
+                    "problema",
+                    "objetivo_general",
+                    "justificacion",
+                    "objetivos_especificos",
+                    "codigo_materia",
+                    "nombre",
+                    "periodo",
                     "anio",
                     "codigo_usuario"
                 ],
@@ -308,7 +310,6 @@ async function obtenerProyectoPorId(idProyecto) {
         ]
     });
 
-    // Obtener historial del proyecto
     const historial = await HistorialProyecto.findAll({
         where: { id_proyecto: idProyecto },
         include: [
@@ -450,6 +451,7 @@ async function obtenerProyectoPorId(idProyecto) {
         esquema_actual: esquemaCompleto
     };
 }
+
 /*
 async function listarProyectosPorGrupo(datosGrupo) {
     // Primero obtenemos las ideas de ese grupo
@@ -497,6 +499,7 @@ async function listarProyectosPorGrupo(datosGrupo) {
 
     return proyectos;
 }*/
+
 
 async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario) {
     const transaction = await db.transaction();
@@ -565,7 +568,7 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
     }
 }
 
-async function listarProyectosDirector(){
+async function listarProyectosDirector() {
     try {
     const proyectos = await Proyecto.findAll({
       include: [{
@@ -798,16 +801,383 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
   }
 }
 
+async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario) {
+    const transaction = await db.transaction();
+    try {
+        if (!codigo_usuario) throw new Error("Debe especificar el código del usuario que realiza la revisión.");
+
+        const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
+        if (!accionesValidas.includes(accion)) throw new Error("Acción no válida.");
+
+        const proyecto = await Proyecto.findByPk(id_proyecto, { include: [{ model: Idea }], transaction });
+        if (!proyecto) throw new Error("Proyecto no encontrado.");
+
+        // 3️⃣ Determinar estado y mensaje
+        let nuevoEstado, mensaje, idEquipoHistorial = null, lider;
 
 
+        const equiposDelGrupo = await Equipo.findAll({
+            where: {
+                codigo_materia: proyecto.Idea.codigo_materia,
+                nombre: proyecto.Idea.nombre,
+                periodo: proyecto.Idea.periodo,
+                anio: proyecto.Idea.anio
+            },
+            attributes: ['id_equipo']
+        });
+
+        const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
+
+        if (idsEquipos.length > 0) {
+            lider = await IntegranteEquipo.findOne({
+                where: {
+                    codigo_usuario: proyecto.Idea.codigo_usuario,
+                    es_lider: true,
+                    id_equipo: { [Op.in]: idsEquipos },
+                },
+                include: [{ model: Equipo }],
+                transaction
+            });
+        }
+
+        switch (accion) {
+            case "Aprobar":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "APROBADO" }, transaction });
+                mensaje = "Proyecto aprobado sin observaciones.";
+                break;
+
+            case "Aprobar_Con_Observacion":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction });
+                mensaje = "Proyecto aprobado con observaciones.";
+                break;
+
+            case "Rechazar":
+                nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" }, transaction });
+                mensaje = "Proyecto rechazado. El equipo deberá presentar una nueva propuesta.";
+
+                // Desactivar el equipo asociado al proyecto
+                if (lider && lider.equipo) {
+                    lider.equipo.estado = false;
+                    await lider.equipo.save({ transaction });
+                    idEquipoHistorial = lider.equipo.id_equipo;
+                } else {
+                    console.warn("No se encontró líder o equipo asociado para desactivar.");
+                }
+
+                proyecto.Idea.codigo_materia = null;
+                proyecto.Idea.nombre = null;
+                proyecto.Idea.periodo = null;
+                proyecto.Idea.anio = null;
+                await proyecto.Idea.save({ transaction });
+
+                break;
+        }
+
+        if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
+
+        // 4️⃣ Actualizar el proyecto
+        proyecto.id_estado = nuevoEstado.id_estado;
+        await proyecto.save({ transaction });
+
+        if (proyecto.Idea) {
+            proyecto.Idea.id_estado = nuevoEstado.id_estado;
+            await proyecto.Idea.save({ transaction });
+        }
+
+        if (!idEquipoHistorial && lider?.equipo) {
+            idEquipoHistorial = lider.equipo.id_equipo;
+        }
+
+        // 5️⃣ Registrar en historial
+        const textoObservacion = observacion
+            ? `${mensaje} Observaciones: ${observacion}`
+            : mensaje;
+
+        await HistorialProyecto.create(
+            {
+                fecha: new Date(),
+                observacion: textoObservacion,
+                id_estado: nuevoEstado.id_estado,
+                id_proyecto,
+                codigo_usuario,
+                id_equipo: idEquipoHistorial
+            },
+            { transaction }
+        );
+
+        await transaction.commit();
+        return { message: mensaje, proyecto };
+    } catch (error) {
+        await transaction.rollback();
+        throw new Error("Error al revisar el proyecto: " + error.message);
+    }
+}
+
+async function liberarProyecto(idProyecto, codigo_usuario) {
+    const transaction = await db.transaction();
+
+    try {
+        const proyecto = await Proyecto.findByPk(idProyecto, {
+            include: [
+                {
+                    model: Idea,
+                    as: "Idea",
+                    include: [{ model: Estado, as: "Estado" }]
+                }
+            ],
+            transaction
+        });
+
+        if (!proyecto) throw new Error("Proyecto no encontrado");
+        if (!proyecto.Idea) throw new Error("No se encontró la idea asociada al proyecto");
+
+        const idea = proyecto.Idea;
+
+        const equipos = await Equipo.findAll({
+            where: {
+                codigo_materia: idea.codigo_materia,
+                nombre: idea.nombre,
+                periodo: idea.periodo,
+                anio: idea.anio
+            },
+            transaction
+        });
+
+        if (!equipos || equipos.length === 0) {
+            throw new Error("No se encontró un equipo asociado al proyecto");
+        }
+
+        let equipo = null;
+        for (const eq of equipos) {
+            const lider = await IntegranteEquipo.findOne({
+                where: {
+                    id_equipo: eq.id_equipo,
+                    codigo_usuario,
+                    es_lider: true
+                },
+                transaction
+            });
+
+            if (lider) {
+                equipo = eq;
+                break;
+            }
+        }
+
+        if (!equipo) {
+            throw new Error("Solo el líder del equipo puede liberar el proyecto");
+        }
+
+        const estadoLibre = await Estado.findOne({
+            where: { descripcion: "LIBRE" },
+            transaction
+        });
+
+        if (!estadoLibre) throw new Error("No se encontró el estado 'LIBRE'");
+
+        idea.id_estado = estadoLibre.id_estado;
+        idea.codigo_usuario = null;
+        idea.codigo_materia = null;
+        idea.nombre = null;
+        idea.periodo = null;
+        idea.anio = null;
+        await idea.save({ transaction });
+
+        if (equipo) {
+            equipo.estado = false;
+            await equipo.save({ transaction });
+        }
+
+        await HistorialProyecto.create({
+            id_proyecto: idProyecto,
+            id_estado: estadoLibre.id_estado,
+            codigo_usuario,
+            observacion: `El líder del equipo liberó la idea asociada al proyecto. Ahora está disponible para nuevos equipos.`,
+            fecha: new Date(),
+            id_equipo: equipo.id_equipo
+        }, { transaction });
+
+        await transaction.commit();
+
+        return {
+            message: "Proyecto liberado exitosamente. La idea ha sido marcada como LIBRE.",
+            id_proyecto: idProyecto,
+            id_idea: idea.id_idea
+        };
+    } catch (error) {
+        if (!transaction.finished) {
+            await transaction.rollback();
+        }
+        throw new Error("Error al liberar el proyecto: " + error.message);
+    }
+}
+
+async function listarPropuestasLibres() {
+    try {
+        const estadoLibre = await Estado.findOne({
+            where: { descripcion: "LIBRE" },
+            attributes: ["id_estado"]
+        });
+
+        if (!estadoLibre) {
+            throw new Error("No se encontró el estado 'LIBRE'");
+        }
+
+        const propuestasLibres = await Idea.findAll({
+            where: { id_estado: estadoLibre.id_estado },
+            attributes: [
+                "id_idea",
+                "titulo",
+                "problema",
+                "justificacion",
+                "objetivo_general",
+                "objetivos_especificos",
+                "codigo_materia",
+                "nombre",
+                "periodo",
+                "anio"
+            ],
+            include: [
+                {
+                    model: Estado,
+                    as: "Estado",
+                    attributes: ["descripcion"]
+                },
+                {
+                    model: Proyecto,
+                    as: "proyectos", // 👈 alias correcto según tu relación
+                    attributes: ["id_proyecto"],
+                    required: true
+                }
+            ],
+            order: [["id_idea", "DESC"]]
+        });
+
+        return propuestasLibres;
+    } catch (error) {
+        console.error("Error al listar propuestas LIBRES:", error);
+        throw new Error("No fue posible listar las propuestas con estado LIBRE y proyecto asociado");
+    }
+}
+
+async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
+    const t = await db.transaction();
+
+    try {
+        const proyecto = await Proyecto.findByPk(id_proyecto, {
+            include: [{ model: Idea, as: "Idea" }],
+            transaction: t
+        });
+
+        if (!proyecto) throw new Error("El proyecto no existe");
+        if (!proyecto.Idea) throw new Error("El proyecto no tiene una idea asociada");
+
+        const idea = proyecto.Idea;
+
+        const estadoStandBy = await Estado.findOne({
+            where: { descripcion: "STAND_BY" },
+            transaction: t
+        });
+        if (!estadoStandBy) throw new Error("No se encontró el estado STAND_BY");
+
+        const equipoExistente = await Equipo.findOne({
+            where: {
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio,
+                estado: true
+            },
+            include: [
+                {
+                    model: IntegranteEquipo,
+                    where: { codigo_usuario, es_lider: true },
+                    required: false
+                }
+            ],
+            transaction: t
+        });
+
+        const equipoAsociado = await Equipo.create(
+            {
+                descripcion: `Equipo de ${codigo_usuario}`,
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio,
+                estado: true
+            },
+            { transaction: t }
+        );
+
+        await IntegranteEquipo.create(
+            {
+                codigo_usuario,
+                id_equipo: equipoAsociado.id_equipo,
+                rol_equipo: "Líder",
+                es_lider: true
+            },
+            { transaction: t }
+        );
+
+        await idea.update(
+            {
+                id_estado: estadoStandBy.id_estado,
+                codigo_usuario,
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio
+            },
+            { transaction: t }
+        );
+
+        await HistorialProyecto.create(
+            {
+                id_proyecto,
+                id_estado: estadoStandBy.id_estado,
+                codigo_usuario,
+                observacion: `El líder ${codigo_usuario} adoptó la propuesta del banco de proyectos.`,
+                fecha: new Date(),
+                id_equipo: equipoAsociado.id_equipo
+            },
+            { transaction: t }
+        );
+
+        await t.commit();
+
+        return {
+            message: "Propuesta adoptada correctamente",
+            proyecto,
+            equipo: equipoAsociado
+        };
+    } catch (error) {
+        await t.rollback();
+        console.error("Error al adoptar propuesta:", error);
+        throw new Error("Error al adoptar la propuesta: " + error.message);
+    }
+}
+
+async function continuarProyecto(idProyecto, codigo_usuario) {
+    // Implementación pendiente
+}
+
+async function listarProyectosParaContinuar() {
+    // Implementación pendiente
+}
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
-    /*listarProyectosPorGrupo,*/
-    actualizarProyecto, 
+    actualizarProyecto,
+    liberarProyecto,
+    revisarProyecto,
+    listarPropuestasLibres,
+    adoptarPropuesta,
+    continuarProyecto,
+    listarProyectosParaContinuar,
     listarProyectosDirector, 
     listarTodosProyectosDeUnEstudiante,
     listarTodosProyectosDeUnProfesor, 
-    listarTodosProyectosDeUnGrupo
-};
+    listarTodosProyectosDeUnGrupo    
 
+};

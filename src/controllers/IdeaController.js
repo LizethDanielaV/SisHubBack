@@ -37,7 +37,7 @@ async function crearIdea(req, res) {
             objetivos_especificos,
             grupo,
             integrantes,
-            codigo_usuario  // ← AHORA VIENE EN EL BODY
+            codigo_usuario  
         } = datosIdea;
 
         // Validar que venga el código de usuario
@@ -321,7 +321,30 @@ async function adoptarIdea(req, res) {
   }
 }
 
-// ahorita continua...
+async function moverIdeaAlBancoPorDecision(req, res) {
+  try {
+    const { id_idea } = req.params;
+    const { codigo_usuario } = req.body;
+
+    if (!codigo_usuario) {
+      return res.status(400).json({ message: "El código del usuario es obligatorio." });
+    }
+
+    if (!id_idea) {
+      return res.status(400).json({ message: "El id de la idea es obligatorio." });
+    }
+
+    const resultado = await IdeaService.moverIdeaAlBancoPorDecision(id_idea, codigo_usuario);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al mover la idea al banco de ideas.",
+      error: error.message
+    });
+  }
+}
+
+// revisar
 async function listarIdeasGrupo(req, res) {
     try {
         const { codigo_materia, nombre, periodo, anio } = req.query;
@@ -359,29 +382,6 @@ async function listarIdeasGrupo(req, res) {
             error: "Error al listar las ideas del grupo"
         });
     }
-}
-
-async function moverIdeaAlBancoPorDecision(req, res) {
-  try {
-    const { id_idea } = req.params;
-    const { codigo_usuario } = req.body;
-
-    if (!codigo_usuario) {
-      return res.status(400).json({ message: "El código del usuario es obligatorio." });
-    }
-
-    if (!id_idea) {
-      return res.status(400).json({ message: "El id de la idea es obligatorio." });
-    }
-
-    const resultado = await IdeaService.moverIdeaAlBancoPorDecision(id_idea, codigo_usuario);
-    return res.status(200).json(resultado);
-  } catch (error) {
-    return res.status(500).json({
-      message: "Error al mover la idea al banco de ideas.",
-      error: error.message
-    });
-  }
 }
 
 export default { revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, adoptarIdea, listarIdeasGrupo, moverIdeaAlBancoPorDecision };

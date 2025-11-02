@@ -135,6 +135,7 @@ async function listarProyectosPorGrupo(req, res) {
     }
 }
 */
+
 async function actualizarProyecto(req, res) {
     try {
         const idProyecto = parseInt(req.params.id);
@@ -212,6 +213,7 @@ async function listarParaDirector(req, res) {
   }
 }
 
+
 async function listarTodosProyectosDeUnEstudiante(req, res) {
   try {
     const proyectos = await ProyectoService.listarTodosProyectosDeUnEstudiante(req.params.codigo_estudiante);
@@ -250,6 +252,98 @@ async function listarTodosProyectosDeUnGrupo(req, res) {
   }
 }
 
+export const liberarProyecto = async (req, res) => {
+    try {
+        const { idProyecto } = req.params;
+        const { codigo_usuario } = req.body;
+
+        if (!codigo_usuario) {
+            return res.status(400).json({ error: "Se requiere el código del usuario líder" });
+        }
+
+        const resultado = await ProyectoService.liberarProyecto(idProyecto, codigo_usuario);
+        return res.status(200).json(resultado);
+
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+};
+
+async function listarPropuestasLibres(req, res) {
+    try {
+        const propuestas = await ProyectoService.listarPropuestasLibres();
+        res.status(200).json({
+            ok: true,
+            total: propuestas.length,
+            data: propuestas
+        });
+    } catch (error) {
+        console.error("Error al listar el banco de propuestas:", error);
+        res.status(500).json({
+            ok: false,
+            mensaje: "Error al listar el banco de propuestas",
+            error: error.message
+        });
+    }
+}
+
+async function adoptarPropuesta(req, res) {
+  try {
+    const { id_proyecto } = req.params;
+    const { codigo_usuario, grupo } = req.body;
+
+    // Validaciones
+    if (!codigo_usuario) {
+      return res.status(400).json({ message: "El código del usuario es obligatorio." });
+    }
+
+    if (!grupo || !grupo.codigo_materia || !grupo.nombre || !grupo.periodo || !grupo.anio) {
+      return res.status(400).json({
+        message: "Los datos del grupo son obligatorios (codigo_materia, nombre, periodo, anio)."
+      });
+    }
+
+    // Llamada al servicio
+    const resultado = await ProyectoService.adoptarPropuesta(id_proyecto, codigo_usuario, grupo);
+
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error("Error al adoptar propuesta:", error);
+    return res.status(500).json({
+      message: "Error al adoptar la propuesta.",
+      error: error.message
+    });
+  }
+}
+
+
+export const revisarProyecto = async (req, res) => {
+  try {
+    const { id_proyecto, accion, observacion, codigo_usuario } = req.body;
+
+    if (!id_proyecto || !accion || !codigo_usuario) {
+      return res.status(400).json({
+        message: "Faltan datos obligatorios: id_proyecto, accion o codigo_usuario.",
+      });
+    }
+
+    const resultado = await ProyectoService.revisarProyecto(
+      id_proyecto,
+      accion,
+      observacion,
+      codigo_usuario
+    );
+
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al revisar el proyecto.",
+      error: error.message,
+    });
+  }
+};
+
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
@@ -258,5 +352,11 @@ export default {
     listarParaDirector, 
     listarTodosProyectosDeUnEstudiante, 
     listarTodosProyectosDeUnProfesor, 
-    listarTodosProyectosDeUnGrupo
+    listarTodosProyectosDeUnGrupo,
+    liberarProyecto,
+    actualizarProyecto, 
+    listarParaDirector, 
+    revisarProyecto,
+    adoptarPropuesta,
+    listarPropuestasLibres
 };
