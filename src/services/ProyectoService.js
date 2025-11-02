@@ -3,9 +3,7 @@ import Idea from "../models/Idea.js";
 import Estado from "../models/Estado.js";
 import Usuario from "../models/Usuario.js";
 import Actividad from "../models/Actividad.js";
-import ActividadItem from "../models/ActividadItem.js";
 import IntegrantesEquipo from "../models/IntegrantesEquipo.js";
-import Item from "../models/Item.js";
 import TipoAlcance from "../models/TipoAlcance.js";
 import Equipo from "../models/Equipo.js";
 import HistorialProyecto from "../models/HistorialProyecto.js";
@@ -16,37 +14,6 @@ import db from "../db/db.js";
 import Grupo from "../models/Grupo.js";
 import Materia from "../models/Materia.js";
 import { Op } from 'sequelize';
-
-function construirJerarquiaItems(items) {
-    const itemsMap = new Map();
-    const raices = [];
-
-    // Crear mapa de items
-    items.forEach(item => {
-        itemsMap.set(item.id_item, {
-            id_item: item.id_item,
-            nombre: item.nombre,
-            super_item: item.super_item,
-            hijos: []
-        });
-    });
-
-    // Construir jerarquía
-    items.forEach(item => {
-        const nodo = itemsMap.get(item.id_item);
-
-        if (item.super_item === null) {
-            raices.push(nodo);
-        } else {
-            const padre = itemsMap.get(item.super_item);
-            if (padre) {
-                padre.hijos.push(nodo);
-            }
-        }
-    });
-
-    return raices;
-}
 
 async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -155,7 +122,7 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             id_proyecto: nuevoProyecto.id_proyecto,
             id_estado: idea.id_estado,
             codigo_usuario: codigo_usuario,
-            observacion: `Proyecto creado a partir de la idea aprobada "${idea.titulo}". Tipo de alcance: ${actividad.Tipo_alcance.nombre}. Esquema adoptado: ${esquemaSeleccionado.id_esquema} con ${itemsEsquema.length} ítems.`
+            observacion: `Proyecto creado a partir de la idea aprobada "${idea.titulo}". Tipo de alcance: ${actividad.Tipo_alcance.nombre}.`
         }, { transaction });
 
         await transaction.commit();
@@ -194,8 +161,6 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             ]
         });
 
-        // Construir estructura jerárquica de ítems (padres e hijos)
-        const itemsJerarquicos = construirJerarquiaItems(itemsEsquema);
 
         return {
             ...proyectoCompleto.toJSON(),
@@ -375,57 +340,10 @@ async function obtenerProyectoPorId(idProyecto) {
         }
     }
 
-    let esquemaCompleto = null;
-
-    if (actividadReferencia && actividadReferencia.Tipo_alcance) {
-        const esquemas = actividadReferencia.Tipo_alcance.Esquemas;
-
-        if (esquemas && esquemas.length > 0) {
-            const esquemaSeleccionado = esquemas[0];
-
-            const itemsEsquema = await Item.findAll({
-                where: { id_esquema: esquemaSeleccionado.id_esquema },
-                attributes: ["id_item", "nombre", "super_item", "id_esquema"],
-                order: [["id_item", "ASC"]]
-            });
-
-            if (itemsEsquema && itemsEsquema.length > 0) {
-                // Construir jerarquía
-                const itemsJerarquicos = construirJerarquiaItems(itemsEsquema);
-
-                esquemaCompleto = {
-                    ...esquemaInfo,
-                    id_esquema: esquemaSeleccionado.id_esquema,
-                    ubicacion: esquemaSeleccionado.ubicacion,
-                    tipo_alcance: actividadReferencia.Tipo_alcance.nombre,
-                    actividad: {
-                        id_actividad: actividadReferencia.id_actividad,
-                        titulo: actividadReferencia.titulo,
-                        grupo: {
-                            codigo_materia: actividadReferencia.codigo_materia,
-                            nombre: actividadReferencia.nombre,
-                            periodo: actividadReferencia.periodo,
-                            anio: actividadReferencia.anio
-                        }
-                    },
-                    total_items: itemsEsquema.length,
-                    items: itemsEsquema.map(item => ({
-                        id_item: item.id_item,
-                        nombre: item.nombre,
-                        super_item: item.super_item,
-                        id_esquema: item.id_esquema
-                    })),
-                    items_jerarquicos: itemsJerarquicos
-                };
-            }
-        }
-    }
-
     return {
         ...proyecto.toJSON(),
         equipo: equipo ? equipo.toJSON() : null,
-        historial,
-        esquema_actual: esquemaCompleto
+        historial
     };
 }
 
