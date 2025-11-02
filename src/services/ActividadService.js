@@ -1,7 +1,6 @@
 import Actividad from "../models/Actividad.js";
 import TipoAlcance from "../models/TipoAlcance.js";
 import Grupo from "../models/Grupo.js";
-import Esquema from "../models/Esquema.js";
 import Item from "../models/Item.js";
 import ActividadItem from "../models/ActividadItem.js";
 import db from "../db/db.js";
@@ -123,6 +122,17 @@ async function editarActividad(
   }
 }
 
+async function tieneActividadPorGrupo(codigo_materia, nombre, periodo, anio) {
+  try {
+    const count = await Actividad.count({
+      where: { codigo_materia, nombre, periodo, anio },
+    });
+    return count > 0;
+  } catch (error) {
+    throw new Error("Error al verificar si el grupo tiene actividades: " + error.message);
+  }
+}
+
 export default {
-    crearActividad, editarActividad
+    crearActividad, editarActividad, tieneActividadPorGrupo
 };
