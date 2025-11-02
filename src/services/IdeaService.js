@@ -520,46 +520,53 @@ async function obtenerIdeaPorId(idIdea) {
 }
 
 async function listarIdeasLibres() {
-    try {
-        const estadoLibre = await Estado.findOne({
-            where: { descripcion: "LIBRE" },
-            attributes: ["id_estado"]
-        });
+  try {
+    const estadoLibre = await Estado.findOne({
+      where: { descripcion: "LIBRE" },
+      attributes: ["id_estado"]
+    });
 
-        if (!estadoLibre) {
-            throw new Error("No se encontró el estado 'LIBRE' en la base de datos");
-        }
-
-        const ideasLibres = await Idea.findAll({
-            where: { id_estado: estadoLibre.id_estado },
-            attributes: [
-                "id_idea",
-                "titulo",
-                "problema",
-                "justificacion",
-                "objetivo_general",
-                "objetivos_especificos",
-                "codigo_materia",
-                "nombre",
-                "periodo",
-                "anio"
-            ],
-            include: [
-                {
-                    model: Estado,
-                    as: "Estado",
-                    attributes: ["descripcion"]
-                }
-            ],
-            order: [["id_idea", "DESC"]]
-        })
-
-        return ideasLibres;
-    } catch (error) {
-        console.error("Error al listar ideas LIBRES:", error);
-        throw new Error("No fue posible listar las ideas con estado LIBRE");
+    if (!estadoLibre) {
+      throw new Error("No se encontró el estado 'LIBRE' en la base de datos");
     }
+
+    const ideasLibres = await Idea.findAll({
+      where: { id_estado: estadoLibre.id_estado },
+      attributes: [
+        "id_idea",
+        "titulo",
+        "problema",
+        "justificacion",
+        "objetivo_general",
+        "objetivos_especificos",
+        "codigo_materia",
+        "nombre",
+        "periodo",
+        "anio"
+      ],
+      include: [
+        {
+          model: Estado,
+          as: "Estado",
+          attributes: ["descripcion"]
+        },
+        {
+          model: Proyecto,
+          required: false,
+          attributes: ["id_proyecto"],
+          where: { id_proyecto: null }
+        }
+      ],
+      order: [["id_idea", "DESC"]]
+    });
+
+    return ideasLibres;
+  } catch (error) {
+    console.error("Error al listar ideas LIBRES:", error);
+    throw new Error("No fue posible listar las ideas con estado LIBRE y sin proyecto asociado");
+  }
 }
+
 
 async function adoptarIdea(id_idea, codigo_usuario, grupo) {
     const t = await db.transaction();
