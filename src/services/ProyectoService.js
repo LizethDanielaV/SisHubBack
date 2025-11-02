@@ -466,7 +466,7 @@ async function listarProyectosDirector() {
                 attributes: ['nombre']
             }, {
                 model: Idea,
-                attributes: ['objetivo_general']
+                attributes: ['objetivo_general', 'titulo' ]
             }],
         });
         return proyectos;
