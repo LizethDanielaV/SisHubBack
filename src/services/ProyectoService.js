@@ -1071,52 +1071,70 @@ async function liberarProyecto(idProyecto, codigo_usuario) {
 }
 
 async function listarPropuestasLibres() {
-    try {
-        const estadoLibre = await Estado.findOne({
-            where: { descripcion: "LIBRE" },
-            attributes: ["id_estado"]
-        });
+  try {
+    const estadoLibre = await Estado.findOne({
+      where: { descripcion: "LIBRE" },
+      attributes: ["id_estado"],
+    });
 
-        if (!estadoLibre) {
-            throw new Error("No se encontró el estado 'LIBRE'");
-        }
-
-        const propuestasLibres = await Idea.findAll({
-            where: { id_estado: estadoLibre.id_estado },
-            attributes: [
-                "id_idea",
-                "titulo",
-                "problema",
-                "justificacion",
-                "objetivo_general",
-                "objetivos_especificos",
-                "codigo_materia",
-                "nombre",
-                "periodo",
-                "anio"
-            ],
-            include: [
-                {
-                    model: Estado,
-                    as: "Estado",
-                    attributes: ["descripcion"]
-                },
-                {
-                    model: Proyecto,
-                    as: "proyectos", // 👈 alias correcto según tu relación
-                    attributes: ["id_proyecto"],
-                    required: true
-                }
-            ],
-            order: [["id_idea", "DESC"]]
-        });
-
-        return propuestasLibres;
-    } catch (error) {
-        console.error("Error al listar propuestas LIBRES:", error);
-        throw new Error("No fue posible listar las propuestas con estado LIBRE y proyecto asociado");
+    if (!estadoLibre) {
+      throw new Error("No se encontró el estado 'LIBRE'");
     }
+
+    const estadoCalificado = await Estado.findOne({
+      where: { descripcion: "CALIFICADO" },
+      attributes: ["id_estado"],
+    });
+
+    if (!estadoCalificado) {
+      throw new Error("No se encontró el estado 'CALIFICADO'");
+    }
+
+    const propuestasLibres = await Idea.findAll({
+      where: { id_estado: estadoLibre.id_estado },
+      attributes: [
+        "id_idea",
+        "titulo",
+        "problema",
+        "justificacion",
+        "objetivo_general",
+        "objetivos_especificos",
+        "codigo_materia",
+        "nombre",
+        "periodo",
+        "anio",
+      ],
+      include: [
+        {
+          model: Estado,
+          attributes: ["descripcion"],
+        },
+        {
+          model: Proyecto,
+          as: "proyectos",
+          attributes: ["id_proyecto", "id_estado"],
+          required: true,
+          include: [
+            {
+              model: Estado,
+              attributes: ["descripcion"],
+              where: { descripcion: "CALIFICADO" }, 
+            },
+          ],
+        },
+      ],
+      order: [["id_idea", "DESC"]],
+    });
+
+    return propuestasLibres;
+  } catch (error) {
+    console.error("Error al listar propuestas LIBRES:", error);
+    throw new Error(
+      "No fue posible listar las propuestas con estado LIBRE y proyecto CALIFICADO"
+    );
+  }
 }
+
 
 async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
     const t = await db.transaction();
