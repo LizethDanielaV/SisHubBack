@@ -281,11 +281,12 @@ async function listarTodosProyectosDeUnProfesor(req, res) {
 
 async function listarTodosProyectosDeUnGrupo(req, res) {
   try {
+    const { codigo_materia, nombre, periodo, anio } = req.query;
     const proyectos = await ProyectoService.listarTodosProyectosDeUnGrupo(
-        req.body.codigo_materia,
-        req.body.nombre, 
-        req.body.periodo, 
-        req.body.anio
+        codigo_materia,
+        nombre, 
+        periodo, 
+        anio
     );
     res.json(proyectos);
   } catch (error) {
