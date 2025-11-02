@@ -3,8 +3,10 @@
   import Grupo from "../models/Grupo.js";
   import Item from "../models/Item.js";
   import ActividadItem from "../models/ActividadItem.js";
+  import Esquema from "../models/Esquema.js";
   import db from "../db/db.js";
   import Entregable from "../models/Entregable.js";
+
 
   async function crearActividad(titulo, descripcion, fecha_inicio, fecha_cierre,
       maximo_integrantes, codigo_materia, nombre, periodo, anio, id_tipo_alcance, items_seleccionados = []) {
@@ -142,33 +144,62 @@
 }
 
 
-    async function obtenerActividadById(id_actividad) {
-        try {
-          const actividad = await Actividad.findByPk(id_actividad, {
-            attributes: [
-              "id_actividad",
-              "titulo",
-              "descripcion",
-              "fecha_inicio",
-              "fecha_cierre",
-              "maximo_integrantes",
-              "codigo_materia",
-              "nombre",
-              "periodo",
-              "anio",
-              "id_tipo_alcance",
-            ],
-          });
-          if (!actividad) {
-            throw new Error("Actividad no encontrada");
-          }
-          return actividad;
-        } catch (error) {
-          throw new Error(
-            "Error al obtener la actividad: " + error.message
-          );
-        }
+async function obtenerActividadById(id_actividad) {
+  try {
+    const actividad = await Actividad.findByPk(id_actividad, {
+      attributes: [
+        "id_actividad",
+        "titulo",
+        "descripcion",
+        "fecha_inicio",
+        "fecha_cierre",
+        "maximo_integrantes",
+        "codigo_materia",
+        "nombre",
+        "periodo",
+        "anio",
+        "id_tipo_alcance",
+      ],
+      include: [
+        {
+          model: ActividadItem,
+          attributes: ["id_item_seleccionado"],
+          include: [
+            {
+              model: Item,
+              attributes: ["id_item", "nombre", "super_item", "id_esquema"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!actividad) {
+      throw new Error("Actividad no encontrada");
     }
+
+    // Obtener el id_esquema de los items seleccionados
+    const itemIds = actividad.Actividad_items.map(ai => ai.Item.id_esquema);
+    const id_esquema = [...new Set(itemIds)][0]; // Tomamos solo el primer esquema si hay más de uno
+
+    // Traer solo el esquema escogido con sus items
+    const esquema = await Esquema.findByPk(id_esquema, {
+      include: [
+        {
+          model: Item,
+          attributes: ["id_item", "nombre", "super_item"],
+        },
+      ],
+    });
+
+    return {
+      actividad,
+      esquema,
+    };
+  } catch (error) {
+    throw new Error("Error al obtener la actividad: " + error.message);
+  }
+}
     
   export default {
       crearActividad, editarActividad, tieneActividadPorGrupo, obtenerActividadById
