@@ -24,5 +24,7 @@ router.patch("/adoptar/:id_proyecto", ProyectoController.adoptarPropuesta);
 router.post("/crear/:id", /* verificarToken,  */ProyectoController.crearProyectoDesdeIdea);
 router.get("/:id", /* verificarToken, */ ProyectoController.obtenerProyecto);
 router.patch("/:id", /* verificarToken,  */ProyectoController.actualizarProyecto);
+router.get("/verDetalle/:id_proyecto", ProyectoController.verDetalleProyecto);
+router.get("/historial/:id_proyecto", ProyectoController.generarHistorialProyecto);
 
 export default router;
