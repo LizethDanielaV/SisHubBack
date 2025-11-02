@@ -396,4 +396,14 @@ const verificarIdeaYProyecto = async (req, res) => {
   }
 };
 
-export default { verificarIdeaYProyecto, revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, adoptarIdea, listarIdeasGrupo, moverIdeaAlBancoPorDecision };
+async function obtenerUltimoHistorial(req, res) {
+  try {
+    const { id_idea } = req.params;
+    const historial = await IdeaService.obtenerUltimoHistorialPorIdea(id_idea);
+    res.status(200).json(historial);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+}
+
+export default { obtenerUltimoHistorial, verificarIdeaYProyecto, revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, adoptarIdea, listarIdeasGrupo, moverIdeaAlBancoPorDecision };

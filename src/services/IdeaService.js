@@ -906,4 +906,33 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
   }
 }
 
-export default { verificarIdeaYProyecto, crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };
+async function obtenerUltimoHistorialPorIdea(id_idea) {
+  try {
+    const historial = await HistorialIdea.findOne({
+      where: { id_idea },
+      include: [
+        {
+          model: Estado,
+          as: "Estado",
+          attributes: ["descripcion"]
+        },
+        {
+          model: Usuario,
+          as: "Usuario",
+          attributes: ["codigo", "nombre"]
+        }
+      ],
+      order: [["fecha", "DESC"]]
+    });
+
+    if (!historial) {
+      throw new Error("No hay historial registrado para esta idea");
+    }
+
+    return historial;
+  } catch (error) {
+    throw new Error("Error al obtener el último historial: " + error.message);
+  }
+}
+
+export default { obtenerUltimoHistorialPorIdea, verificarIdeaYProyecto, crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };

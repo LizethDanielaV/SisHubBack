@@ -10,6 +10,7 @@ router.post("/crear", /* verificarToken,  */IdeaController.crearIdea);
 router.post("/verificar/:codigo_usuario", IdeaController.verificarIdeaYProyecto);
 router.get("/grupo/listar", IdeaController.listarIdeasGrupo);
 router.get("/libres", IdeaController.listarIdeasLibres);
+router.get("/:id_idea/ultimo-historial", IdeaController.obtenerUltimoHistorial);
 router.patch("/adoptar/:id_idea", IdeaController.adoptarIdea);
 router.put("/actualizar/:id", IdeaController.actualizarIdea);
 router.get("/:id", IdeaController.obtenerIdea);
