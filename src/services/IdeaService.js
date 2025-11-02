@@ -4,6 +4,7 @@ import Usuario from "../models/Usuario.js";
 import Grupo from "../models/Grupo.js";
 import GrupoUsuario from "../models/GrupoUsuario.js";
 import Equipo from "../models/Equipo.js";
+import Proyecto from "../models/Proyecto.js"
 import Actividad from "../models/Actividad.js";
 import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import HistorialIdea from "../models/HistorialIdea.js";
