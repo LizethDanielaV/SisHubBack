@@ -1244,6 +1244,106 @@ async function obtenerProyectosContinuables(codigo_usuario) {
     }
 }
 
+async function verDetalleProyecto(idProyecto){
+   
+  if (!idProyecto || isNaN(idProyecto)) {
+    throw new Error("El id no es válido");
+  }
+  try {
+    const proyectoBuscado = await Proyecto.findOne({
+        where: { id_proyecto: idProyecto },
+        attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'palabras_clave', 'fecha_creacion'],
+        include: [{
+            model: HistorialProyecto, 
+            attributes: ['id_historial_proyecto', 'fecha'], 
+            include: [{
+                model: Estado,
+                attributes: ['descripcion']
+            }, {
+                model: Equipo, 
+                attributes: ['id_equipo'],
+                include: [{
+                    model: IntegrantesEquipo, 
+                    attributes: ['rol_equipo'], 
+                    include: [{
+                        model: Usuario, 
+                        attributes: ['nombre', 'codigo']
+                    }]
+                }]
+            }]
+
+        }, 
+        {
+            model: TipoAlcance,
+            attributes: ['nombre']
+            },
+            {
+            model: Idea,
+            attributes: ['titulo', 'objetivo_general']
+        }, {
+            model: Entregable, 
+            attributes: ['tipo', 'nombre_archivo', 'url_archivo', 'fecha_subida'], 
+            include: [{
+                model: Estado, 
+                attributes: ['descripcion']
+            }]
+        }
+        ]
+    });
+    if (!proyectoBuscado) {
+      throw new Error("Proyecto no encontrado");
+    }
+    return proyectoBuscado;
+  } catch (error) {
+    throw new Error("Error al obtener la materia " + error.message);
+  }
+} 
+
+async function generarHistorialProyecto(idProyecto){
+   
+      if (!idProyecto || isNaN(idProyecto)) {
+        throw new Error("El id no es válido");
+      }
+      try {
+        const proyectoBuscado = await Proyecto.findOne({
+            where: { id_proyecto: idProyecto },
+            attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'palabras_clave', 'fecha_creacion'],
+            include: [
+                {
+                    model: TipoAlcance,
+                    attributes: ['nombre']
+                },
+                {
+                    model: Idea,
+                    attributes: ['titulo', 'objetivo_general']
+                },{
+                    model: HistorialProyecto, 
+                    attributes: ['id_historial_proyecto', 'fecha'], 
+                    include: [{
+                        model: Estado,
+                        attributes: ['descripcion']
+                    }]
+                    
+                }, {
+                    model: Entregable, 
+                    attributes: ['id_entregable','nombre_archivo', 'fecha_subida'], 
+                    include: [{
+                        model: Actividad, 
+                        attributes: ['titulo']
+                    }]
+                }
+            ]
+        });
+    
+        if (!proyectoBuscado) {
+          throw new Error("Proyecto no encontrado");
+        }
+        return proyectoBuscado;
+      } catch (error) {
+        throw new Error("Error al obtener la materia " + error.message);
+      }
+}
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
@@ -1258,6 +1358,8 @@ export default {
     listarProyectosDirector,
     listarTodosProyectosDeUnEstudiante,
     listarTodosProyectosDeUnProfesor,
-    listarTodosProyectosDeUnGrupo
+    listarTodosProyectosDeUnGrupo, 
+    verDetalleProyecto, 
+    generarHistorialProyecto
 
 };

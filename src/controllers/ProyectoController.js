@@ -386,6 +386,27 @@ export const revisarProyecto = async (req, res) => {
   }
 };
 
+async function verDetalleProyecto(req, res) {
+  try {
+    const proyecto = await ProyectoService.verDetalleProyecto(req.params.id_proyecto);
+    res.status(200).json(proyecto);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener el proyecto", error: error.message });
+  }
+}
+
+ async function generarHistorialProyecto(req, res) {
+  try {
+    const proyecto = await ProyectoService.generarHistorialProyecto(req.params.id_proyecto);
+    res.status(200).json(proyecto);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener el proyecto", error: error.message });
+  }
+}
 
 export default {
     crearProyectoDesdeIdea,
@@ -404,5 +425,7 @@ export default {
     calificarProyecto,
     listarPropuestasLibres,
     obtenerProyectosContinuables,
-    continuarProyecto
+    continuarProyecto, 
+    verDetalleProyecto, 
+    generarHistorialProyecto
 };
