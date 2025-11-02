@@ -432,7 +432,6 @@ async function actualizarIdea(idIdea, datosActualizacion) {
     }
 }
 
-//revisar
 async function obtenerIdeaPorId(idIdea) {
     // 1. Obtener la idea con sus relaciones simples
     const idea = await Idea.findByPk(idIdea, {
@@ -640,31 +639,51 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
     }
 }
 
-//revisar
 async function listarIdeasPorGrupo(datosGrupo) {
+  try {
+    const estadoRevision = await Estado.findOne({
+      where: { descripcion: "REVISION" },
+      attributes: ["id_estado"],
+    });
+
+    if (!estadoRevision) {
+      throw new Error("No se encontró el estado 'REVISION' en la base de datos");
+    }
+
     const ideas = await Idea.findAll({
-        where: {
-            codigo_materia: datosGrupo.codigo_materia,
-            nombre: datosGrupo.nombre,
-            periodo: datosGrupo.periodo,
-            anio: datosGrupo.anio
+      where: {
+        codigo_materia: datosGrupo.codigo_materia,
+        nombre: datosGrupo.nombre,
+        periodo: datosGrupo.periodo,
+        anio: datosGrupo.anio,
+        id_estado: estadoRevision.id_estado,
+      },
+      include: [
+        {
+          model: Estado,
+          as: "Estado",
+          attributes: ["descripcion"],
         },
-        include: [
-            {
-                model: Estado,
-                as: "Estado",
-                attributes: ["descripcion"]
-            },
-            {
-                model: Usuario,
-                as: "Usuario",
-                attributes: ["codigo", "nombre", "correo"]
-            }
-        ],
-        order: [["id_idea", "DESC"]]
+        {
+          model: Usuario,
+          as: "Usuario",
+          attributes: ["codigo", "nombre", "correo"],
+        },
+        {
+          model: Proyecto,
+          required: false, 
+          attributes: ["id_proyecto"],
+          where: { id_proyecto: null },
+        },
+      ],
+      order: [["id_idea", "DESC"]],
     });
 
     return ideas;
+  } catch (error) {
+    console.error("Error al listar ideas por grupo:", error);
+    throw new Error("No fue posible listar las ideas del grupo en revisión sin proyecto asociado");
+  }
 }
 
 async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
