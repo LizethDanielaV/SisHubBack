@@ -95,7 +95,7 @@ async function obtenerProyecto(req, res) {
         });
     }
 }
-
+/*
 async function listarProyectosPorGrupo(req, res) {
     try {
         const { codigo_materia, nombre, periodo, anio } = req.query;
@@ -134,7 +134,7 @@ async function listarProyectosPorGrupo(req, res) {
         });
     }
 }
-
+*/
 async function actualizarProyecto(req, res) {
     try {
         const idProyecto = parseInt(req.params.id);
@@ -212,10 +212,51 @@ async function listarParaDirector(req, res) {
   }
 }
 
+async function listarTodosProyectosDeUnEstudiante(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarTodosProyectosDeUnEstudiante(req.params.codigo_estudiante);
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+async function listarTodosProyectosDeUnProfesor(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarTodosProyectosDeUnProfesor(req.params.codigo_docente);
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
+async function listarTodosProyectosDeUnGrupo(req, res) {
+  try {
+    const proyectos = await ProyectoService.listarTodosProyectosDeUnGrupo(
+        req.body.codigo_materia,
+        req.body.nombre, 
+        req.body.periodo, 
+        req.body.anio
+    );
+    res.json(proyectos);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
-    listarProyectosPorGrupo,
+    /*listarProyectosPorGrupo,*/
     actualizarProyecto, 
-    listarParaDirector
+    listarParaDirector, 
+    listarTodosProyectosDeUnEstudiante, 
+    listarTodosProyectosDeUnProfesor, 
+    listarTodosProyectosDeUnGrupo
 };
