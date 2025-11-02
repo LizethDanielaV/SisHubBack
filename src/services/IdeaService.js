@@ -568,7 +568,6 @@ async function listarIdeasLibres() {
   }
 }
 
-
 async function adoptarIdea(id_idea, codigo_usuario, grupo) {
     const t = await db.transaction();
 
