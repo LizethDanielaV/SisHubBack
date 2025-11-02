@@ -343,8 +343,6 @@ async function moverIdeaAlBancoPorDecision(req, res) {
     });
   }
 }
-
-// revisar
 async function listarIdeasGrupo(req, res) {
     try {
         const { codigo_materia, nombre, periodo, anio } = req.query;
@@ -383,7 +381,6 @@ async function listarIdeasGrupo(req, res) {
         });
     }
 }
-
 const verificarIdeaYProyecto = async (req, res) => {
   const { codigo_usuario } = req.params;
   const grupo = req.body; 
