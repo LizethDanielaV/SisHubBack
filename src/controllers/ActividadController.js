@@ -71,7 +71,27 @@ async function editarActividad(req, res) {
   }
 }
 
+async function verificarActividadGrupo(req, res) {
+  try {
+    const { codigo_materia, nombre, periodo, anio } = req.params;
+
+    if (!codigo_materia || !nombre || !periodo || !anio) {
+      return res.status(400).json({ message: "Faltan parámetros del grupo." });
+    }
+
+    const tieneActividad = await ActividadService.tieneActividadPorGrupo(
+      codigo_materia,
+      nombre,
+      periodo,
+      anio
+    );
+
+    res.json({ tieneActividad });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
 
 export default {
-  crearActividad,editarActividad
+  crearActividad, editarActividad, verificarActividadGrupo
 };
