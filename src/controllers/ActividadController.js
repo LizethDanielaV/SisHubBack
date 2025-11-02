@@ -92,6 +92,21 @@ async function verificarActividadGrupo(req, res) {
   }
 }
 
+async function obtenerActividadById(req, res) {
+  try {
+    const { id_actividad } = req.params;
+
+    if (!id_actividad) {
+      return res.status(400).json({ message: "Falta el ID de la actividad." });
+    }
+
+    const actividad = await ActividadService.obtenerActividadById(id_actividad);
+    res.json({ actividad });
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+}
+
 export default {
-  crearActividad, editarActividad, verificarActividadGrupo
+  crearActividad, editarActividad, verificarActividadGrupo, obtenerActividadById  
 };
