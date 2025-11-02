@@ -7,6 +7,7 @@ const router = Router();
 
 
 router.post("/crear", /* verificarToken,  */IdeaController.crearIdea);
+router.post("/verificar/:codigo_usuario", IdeaController.verificarIdeaYProyecto);
 router.get("/grupo/listar", IdeaController.listarIdeasGrupo);
 router.get("/libres", IdeaController.listarIdeasLibres);
 router.patch("/adoptar/:id_idea", IdeaController.adoptarIdea);

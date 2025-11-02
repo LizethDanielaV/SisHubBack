@@ -825,4 +825,78 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
     }
 }
 
-export default { crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };
+async function verificarIdeaYProyecto(codigo_usuario, grupo) {
+  try {
+    const idea = await Idea.findOne({
+      where: {
+        codigo_usuario,
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio
+      },
+      include: [
+        { model: Estado, as: "Estado", attributes: ["descripcion"] }
+      ]
+    });
+
+    const equipo = await Equipo.findOne({
+      where: {
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio,
+        estado: true
+      },
+      include: [
+        {
+          model: IntegranteEquipo,
+          as: "Integrante_Equipos",
+          where: { codigo_usuario },
+          required: false
+        }
+      ]
+    });
+
+    let proyecto = null;
+    if (idea) {
+      proyecto = await Proyecto.findOne({
+        where: { id_idea: idea.id_idea },
+        include: [
+          { model: Estado, as: "Estado", attributes: ["descripcion"] }
+        ]
+      });
+    }
+
+    // 4️⃣ Respuesta estructurada
+    return {
+      tieneIdea: !!idea,
+      idea: idea
+        ? {
+            id_idea: idea.id_idea,
+            titulo: idea.titulo,
+            estado: idea.Estado.descripcion
+          }
+        : null,
+      tieneProyecto: !!proyecto,
+      proyecto: proyecto
+        ? {
+            id_proyecto: proyecto.id_proyecto,
+            titulo: proyecto.titulo,
+            estado: proyecto.Estado.descripcion
+          }
+        : null,
+      equipo: equipo
+        ? {
+            id_equipo: equipo.id_equipo,
+            activo: equipo.estado,
+            miembros: equipo.Integrante_Equipos.length
+          }
+        : null
+    };
+  } catch (error) {
+    throw new Error("Error al verificar idea y proyecto: " + error.message);
+  }
+}
+
+export default { verificarIdeaYProyecto, crearIdea, actualizarIdea, obtenerIdeaPorId, listarIdeasLibres, adoptarIdea, listarIdeasPorGrupo, revisarIdea, moverIdeaAlBancoPorDecision };

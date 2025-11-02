@@ -384,4 +384,16 @@ async function listarIdeasGrupo(req, res) {
     }
 }
 
-export default { revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, adoptarIdea, listarIdeasGrupo, moverIdeaAlBancoPorDecision };
+const verificarIdeaYProyecto = async (req, res) => {
+  const { codigo_usuario } = req.params;
+  const grupo = req.body; 
+
+  try {
+    const resultado = await IdeaService.verificarIdeaYProyecto(codigo_usuario, grupo);
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export default { verificarIdeaYProyecto, revisarIdea, crearIdea, actualizarIdea, obtenerIdea, listarIdeasLibres, adoptarIdea, listarIdeasGrupo, moverIdeaAlBancoPorDecision };

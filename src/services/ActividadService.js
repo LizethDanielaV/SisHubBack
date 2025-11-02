@@ -58,8 +58,6 @@ async function crearActividad(titulo, descripcion, fecha_inicio, fecha_cierre,
     }
 }
 
-
-
 async function editarActividad(
   id_actividad,
   { titulo, descripcion, fecha_inicio, fecha_cierre, maximo_integrantes, id_tipo_alcance, items_seleccionados = [] }
