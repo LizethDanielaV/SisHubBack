@@ -202,6 +202,49 @@ async function actualizarProyecto(req, res) {
     }
 }
 
+const calificarProyecto = async (req, res) => {
+  const { id_proyecto } = req.params;
+  const { observacion, codigo_usuario } = req.body;
+
+  try {
+    const resultado = await ProyectoService.calificarProyecto(
+      id_proyecto,
+      observacion,
+      codigo_usuario
+    );
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const continuarProyecto = async (req, res) => {
+  const { id_proyecto } = req.params;
+  const { codigo_usuario } = req.body;
+
+  try {
+    const resultado = await ProyectoService.continuarProyecto(
+      id_proyecto,
+      codigo_usuario
+    );
+    res.status(200).json(resultado);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const obtenerProyectosContinuables = async (req, res) => {
+  const { codigo_usuario } = req.params;
+
+  try {
+    const proyectos = await ProyectoService.obtenerProyectosContinuables(codigo_usuario);
+    res.status(200).json(proyectos);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+
 async function listarParaDirector(req, res) {
   try {
     const proyectos = await ProyectoService.listarProyectosDirector();
@@ -358,5 +401,8 @@ export default {
     listarParaDirector, 
     revisarProyecto,
     adoptarPropuesta,
-    listarPropuestasLibres
+    calificarProyecto,
+    listarPropuestasLibres,
+    obtenerProyectosContinuables,
+    continuarProyecto
 };

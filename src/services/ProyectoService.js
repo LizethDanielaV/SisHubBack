@@ -105,25 +105,12 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             throw new Error("La actividad no tiene un tipo de alcance definido");
         }
 
-        // Obtener el esquema del tipo de alcance
-        const esquemas = actividad.Tipo_alcance.Esquemas;
-
-        if (!esquemas || esquemas.length === 0) {
-            throw new Error("El tipo de alcance no tiene esquemas asociados");
-        }
-
-        // Tomar el primer esquema (o puedes agregar lógica para seleccionar uno específico)
-        const esquemaSeleccionado = esquemas[0];
-
-        // Obtener TODOS los ítems del esquema completo
-        const itemsEsquema = await Item.findAll({
-            where: { id_esquema: esquemaSeleccionado.id_esquema },
-            attributes: ["id_item", "nombre", "super_item", "id_esquema"],
-            order: [["id_item", "ASC"]]
+        const estadoProyecto = await Estado.findOne({
+            where: { descripcion: "EN_CURSO" }
         });
 
-        if (!itemsEsquema || itemsEsquema.length === 0) {
-            throw new Error("El esquema no tiene ítems definidos");
+        if (!estadoProyecto) {
+            throw new Error("No existe el estado 'EN_CURSO' en la tabla Estado");
         }
 
         // Validaciones
@@ -149,7 +136,8 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             tecnologias: tecnologias || null,
             palabras_clave: palabras_clave || null,
             id_idea: id_idea,
-            id_tipo_alcance: actividad.id_tipo_alcance
+            id_tipo_alcance: actividad.id_tipo_alcance,
+            id_estado: estadoProyecto.id_estado
         }, { transaction });
 
         // Obtener el equipo
@@ -187,7 +175,8 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
                         "nombre",
                         "periodo",
                         "anio",
-                        "codigo_usuario"
+                        "codigo_usuario",
+                        "id_estado"
                     ],
                     include: [
                         {
@@ -214,18 +203,6 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
                 id_equipo: equipo.id_equipo,
                 descripcion: equipo.descripcion
             } : null,
-            esquema_adoptado: {
-                id_esquema: esquemaSeleccionado.id_esquema,
-                ubicacion: esquemaSeleccionado.ubicacion,
-                total_items: itemsEsquema.length,
-                items: itemsEsquema.map(item => ({
-                    id_item: item.id_item,
-                    nombre: item.nombre,
-                    super_item: item.super_item,
-                    id_esquema: item.id_esquema
-                })),
-                items_jerarquicos: itemsJerarquicos
-            },
             actividad: {
                 id_actividad: actividad.id_actividad,
                 titulo: actividad.titulo,
@@ -500,7 +477,6 @@ async function listarProyectosPorGrupo(datosGrupo) {
     return proyectos;
 }*/
 
-
 async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -570,263 +546,330 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
 
 async function listarProyectosDirector() {
     try {
-    const proyectos = await Proyecto.findAll({
-      include: [{
-        model: TipoAlcance,
-        attributes: ['nombre']
-      }, {
-        model: Idea, 
-        attributes: ['objetivo_general']
-      }],
-    });
-    return proyectos;
-  } catch (error) {
-    throw new Error("Error al obtener los proyectos " + error.message);
-  }
+        const proyectos = await Proyecto.findAll({
+            include: [{
+                model: TipoAlcance,
+                attributes: ['nombre']
+            }, {
+                model: Idea,
+                attributes: ['objetivo_general']
+            }],
+        });
+        return proyectos;
+    } catch (error) {
+        throw new Error("Error al obtener los proyectos " + error.message);
+    }
 }
 
 async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
-  try {
-    const proyectos = await Proyecto.findAll({
-      attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
-      include: [
-        {
-          model: TipoAlcance,
-          attributes: ['nombre']
-        },
-        {
-          model: Idea,
-          attributes: ['titulo', 'objetivo_general']
-        },
-        {
-            model: Entregable,
-            attributes: ['id_entregable'],
+    try {
+        const proyectos = await Proyecto.findAll({
+            attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
             include: [
                 {
-                    model: Actividad,
-                    attributes: ['id_actividad'],
-                    include: [{
-                        model: Grupo, 
-                        on: {
-                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
-                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
-                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
-                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
-                  },
-                        attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
-                        include: [{
-                            model: Materia, 
-                            attributes: ['nombre']
-                        }]
-                    }
+                    model: TipoAlcance,
+                    attributes: ['nombre']
+                },
+                {
+                    model: Idea,
+                    attributes: ['titulo', 'objetivo_general']
+                },
+                {
+                    model: Entregable,
+                    attributes: ['id_entregable'],
+                    include: [
+                        {
+                            model: Actividad,
+                            attributes: ['id_actividad'],
+                            include: [{
+                                model: Grupo,
+                                on: {
+                                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
+                                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
+                                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
+                                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
+                                },
+                                attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                                include: [{
+                                    model: Materia,
+                                    attributes: ['nombre']
+                                }]
+                            }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: HistorialProyecto,
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: Equipo,
+                            required: true,
+                            attributes: [],
+                            include: [
+                                {
+                                    model: IntegrantesEquipo,
+                                    required: true,
+                                    attributes: [],
+                                    include: [
+                                        {
+                                            model: Usuario,
+                                            attributes: ['codigo'],
+                                            where: {
+                                                codigo: codigoEstudiante
+                                            },
+                                            required: true
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
                     ]
                 }
             ]
-        },
-        {
-          model: HistorialProyecto,
-          required: true,
-          attributes: [],
-          include: [
-            {
-              model: Equipo,
-              required: true,
-              attributes: [],
-              include: [
-                {
-                  model: IntegrantesEquipo,
-                  required: true,
-                  attributes: [],
-                  include: [
-                    {
-                      model: Usuario,
-                      attributes: ['codigo'],
-                      where: {
-                        codigo: codigoEstudiante
-                      },
-                      required: true
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    });
-    return proyectos;
-  } catch (error) {
-    throw new Error("Error al obtener los proyectos: " + error.message);
-  }
+        });
+        return proyectos;
+    } catch (error) {
+        throw new Error("Error al obtener los proyectos: " + error.message);
+    }
 }
 
 async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
-  try {
-    const proyectos = await Proyecto.findAll({
-      attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
-      include: [
-        {
-          model: TipoAlcance,
-          attributes: ['nombre']
-        },
-        {
-          model: Idea,
-          attributes: ['titulo', 'objetivo_general']
-        },
-        {
-            model: Entregable,
-            attributes: ['id_entregable'],
+    try {
+        const proyectos = await Proyecto.findAll({
+            attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
             include: [
                 {
-                    model: Actividad,
-                    attributes: ['id_actividad'],
-                    include: [{
-                        model: Grupo, 
-                        on: {
-                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
-                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
-                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
-                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
-                  },
-                        attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
-                        include: [{
-                            model: Materia, 
-                            attributes: ['nombre']
-                        }]
-                    }
+                    model: TipoAlcance,
+                    attributes: ['nombre']
+                },
+                {
+                    model: Idea,
+                    attributes: ['titulo', 'objetivo_general']
+                },
+                {
+                    model: Entregable,
+                    attributes: ['id_entregable'],
+                    include: [
+                        {
+                            model: Actividad,
+                            attributes: ['id_actividad'],
+                            include: [{
+                                model: Grupo,
+                                on: {
+                                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
+                                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
+                                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
+                                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
+                                },
+                                attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                                include: [{
+                                    model: Materia,
+                                    attributes: ['nombre']
+                                }]
+                            }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: HistorialProyecto,
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: Usuario,
+                            required: true,
+                            attributes: [],
+                            where: {
+                                codigo: codigoProfesor
+                            },
+                            required: true
+                        }
                     ]
                 }
             ]
-        },
-        {
-          model: HistorialProyecto,
-          required: true,
-          attributes: [],
-          include: [
-            {
-              model: Usuario,
-              required: true,
-              attributes: [],
-              where: {
-                        codigo: codigoProfesor
-                      },
-              required: true
-            }
-          ]
-        }
-      ]
-    });
-    const resultado = proyectos.map(proyecto => {
-      // obtener materias asociadas (sin duplicados)
-      const materias = [];
+        });
+        const resultado = proyectos.map(proyecto => {
+            // obtener materias asociadas (sin duplicados)
+            const materias = [];
 
-      proyecto.entregables?.forEach(entregable => {
-        const materia = entregable.actividad?.Grupo?.Materium;
-        if (materia && materia.nombre && !materias.some(m => m.nombre === materia.nombre)) {
-          materias.push({ nombre: materia.nombre });
-        }
-      });
+            proyecto.entregables?.forEach(entregable => {
+                const materia = entregable.actividad?.Grupo?.Materium;
+                if (materia && materia.nombre && !materias.some(m => m.nombre === materia.nombre)) {
+                    materias.push({ nombre: materia.nombre });
+                }
+            });
 
-      return {
-        id_proyecto: proyecto.id_proyecto,
-        linea_investigacion: proyecto.linea_investigacion,
-        tecnologias: proyecto.tecnologias,
-        fecha_creacion: proyecto.fecha_creacion,
-        Tipo_alcance: proyecto.TipoAlcance,
-        Idea: proyecto.Idea,
-        materias: materias
-      };
-    });
-    return resultado;
-  } catch (error) {
-    throw new Error("Error al obtener los proyectos: " + error.message);
-  }
+            return {
+                id_proyecto: proyecto.id_proyecto,
+                linea_investigacion: proyecto.linea_investigacion,
+                tecnologias: proyecto.tecnologias,
+                fecha_creacion: proyecto.fecha_creacion,
+                Tipo_alcance: proyecto.TipoAlcance,
+                Idea: proyecto.Idea,
+                materias: materias
+            };
+        });
+        return resultado;
+    } catch (error) {
+        throw new Error("Error al obtener los proyectos: " + error.message);
+    }
 }
 
 async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, anio) {
-  try {
-    const proyectos = await Proyecto.findAll({
-      attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
-      include: [
-        {
-          model: TipoAlcance,
-          attributes: ['nombre']
-        },
-        {
-          model: Idea,
-          attributes: ['titulo', 'objetivo_general']
-        },
-        {
-          model: Entregable,
-          attributes: ['id_entregable'],
-          include: [
-            {
-              model: Actividad,
-              attributes: ['id_actividad'],
-              include: [
+    try {
+        const proyectos = await Proyecto.findAll({
+            attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
+            include: [
                 {
-                  model: Grupo,
-                  attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
-                  on: {
-                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.codigo_materia') },
-                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.nombre') },
-                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.periodo') },
-                    '$entregables.actividad.anio$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.anio') }
-                  },
-                  where: {
-                    codigo_materia: codigoMateria,
-                    nombre: nombre,
-                    periodo: periodo,
-                    anio: anio
-                  },
-                  required: true 
+                    model: TipoAlcance,
+                    attributes: ['nombre']
+                },
+                {
+                    model: Idea,
+                    attributes: ['titulo', 'objetivo_general']
+                },
+                {
+                    model: Entregable,
+                    attributes: ['id_entregable'],
+                    include: [
+                        {
+                            model: Actividad,
+                            attributes: ['id_actividad'],
+                            include: [
+                                {
+                                    model: Grupo,
+                                    attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                                    on: {
+                                        '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.codigo_materia') },
+                                        '$entregables.actividad.nombre$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.nombre') },
+                                        '$entregables.actividad.periodo$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.periodo') },
+                                        '$entregables.actividad.anio$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.anio') }
+                                    },
+                                    where: {
+                                        codigo_materia: codigoMateria,
+                                        nombre: nombre,
+                                        periodo: periodo,
+                                        anio: anio
+                                    },
+                                    required: true
+                                }
+                            ]
+                        }
+                    ]
                 }
-              ]
-            }
-          ]
-        }
-      ]
-    });
-    const resultado = proyectos.map(p => ({
-      id_proyecto: p.id_proyecto,
-      linea_investigacion: p.linea_investigacion,
-      tecnologias: p.tecnologias,
-      fecha_creacion: p.fecha_creacion,
-      Tipo_alcance: p.TipoAlcance, 
-      Idea: p.Idea 
-    }));
-    return resultado;
-  } catch (error) {
-    throw new Error("Error al obtener los proyectos: " + error.message);
-  }
+            ]
+        });
+        const resultado = proyectos.map(p => ({
+            id_proyecto: p.id_proyecto,
+            linea_investigacion: p.linea_investigacion,
+            tecnologias: p.tecnologias,
+            fecha_creacion: p.fecha_creacion,
+            Tipo_alcance: p.TipoAlcance,
+            Idea: p.Idea
+        }));
+        return resultado;
+    } catch (error) {
+        throw new Error("Error al obtener los proyectos: " + error.message);
+    }
 }
 
-async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario) {
+async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
     const transaction = await db.transaction();
     try {
-        if (!codigo_usuario) throw new Error("Debe especificar el código del usuario que realiza la revisión.");
+        if (!codigo_usuario) throw new Error("Debe especificar el código del usuario que realiza la calificación.");
 
-        const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
-        if (!accionesValidas.includes(accion)) throw new Error("Acción no válida.");
-
-        const proyecto = await Proyecto.findByPk(id_proyecto, { include: [{ model: Idea }], transaction });
+        // Buscar proyecto
+        const proyecto = await Proyecto.findByPk(id_proyecto, {
+            include: [{ model: Idea }],
+            transaction
+        });
         if (!proyecto) throw new Error("Proyecto no encontrado.");
 
-        // 3️⃣ Determinar estado y mensaje
-        let nuevoEstado, mensaje, idEquipoHistorial = null, lider;
+        // Buscar estado "CALIFICADO"
+        const estadoCalificado = await Estado.findOne({
+            where: { descripcion: "CALIFICADO" },
+            transaction
+        });
+        if (!estadoCalificado) throw new Error("No existe el estado 'CALIFICADO' en la tabla Estado.");
 
+        // Actualizar estado del proyecto e idea
+        proyecto.id_estado = estadoCalificado.id_estado;
+        await proyecto.save({ transaction });
 
-        const equiposDelGrupo = await Equipo.findAll({
+        if (proyecto.Idea) {
+            proyecto.Idea.id_estado = estadoCalificado.id_estado;
+            await proyecto.Idea.save({ transaction });
+        }
+
+        // Buscar equipo relacionado (opcional)
+        const equipo = await Equipo.findOne({
             where: {
                 codigo_materia: proyecto.Idea.codigo_materia,
                 nombre: proyecto.Idea.nombre,
                 periodo: proyecto.Idea.periodo,
                 anio: proyecto.Idea.anio
             },
-            attributes: ['id_equipo']
+            transaction
         });
 
-        const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
+        // Registrar en historial
+        await HistorialProyecto.create({
+            fecha: new Date(),
+            observacion: observacion
+                ? `Proyecto calificado. Observaciones: ${observacion}`
+                : "Proyecto calificado sin observaciones.",
+            id_estado: estadoCalificado.id_estado,
+            id_proyecto,
+            codigo_usuario,
+            id_equipo: equipo ? equipo.id_equipo : null
+        }, { transaction });
+
+        await transaction.commit();
+
+        return { message: "Proyecto calificado exitosamente.", proyecto };
+    } catch (error) {
+        await transaction.rollback();
+        throw new Error("Error al calificar el proyecto: " + error.message);
+    }
+}
+
+async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario) {
+    const transaction = await db.transaction();
+    try {
+        if (!codigo_usuario)
+            throw new Error("Debe especificar el código del usuario que realiza la revisión.");
+
+        const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
+        if (!accionesValidas.includes(accion)) throw new Error("Acción no válida.");
+
+        const proyecto = await Proyecto.findByPk(id_proyecto, {
+            include: [{ model: Idea }],
+            transaction,
+        });
+        if (!proyecto) throw new Error("Proyecto no encontrado.");
+
+        let nuevoEstadoProyecto = null;
+        let nuevoEstadoIdea = null;
+        let mensaje = "";
+        let idEquipoHistorial = null;
+        let lider;
+
+        // Buscar equipos del grupo
+        const equiposDelGrupo = await Equipo.findAll({
+            where: {
+                codigo_materia: proyecto.Idea.codigo_materia,
+                nombre: proyecto.Idea.nombre,
+                periodo: proyecto.Idea.periodo,
+                anio: proyecto.Idea.anio,
+            },
+            attributes: ["id_equipo"],
+        });
+
+        const idsEquipos = equiposDelGrupo.map((e) => e.id_equipo);
 
         if (idsEquipos.length > 0) {
             lider = await IntegranteEquipo.findOne({
@@ -836,51 +879,66 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
                     id_equipo: { [Op.in]: idsEquipos },
                 },
                 include: [{ model: Equipo }],
-                transaction
+                transaction,
             });
         }
 
+        // Estados de referencia
+        const estadoEnCurso = await Estado.findOne({ where: { descripcion: "EN_CURSO" }, transaction });
+        const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction });
+        const estadoRechazado = await Estado.findOne({ where: { descripcion: "RECHAZADO" }, transaction });
+        const estadoCalificado = await Estado.findOne({ where: { descripcion: "CALIFICADO" }, transaction });
+        const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" }, transaction });
+        const estadoAprobada = await Estado.findOne({ where: { descripcion: "APROBADA" }, transaction });
+
+        // Verificación
+        if (!estadoEnCurso || !estadoStandBy || !estadoRechazado)
+            throw new Error("No se encontraron los estados requeridos.");
+
+        // 🔁 Lógica según acción
         switch (accion) {
             case "Aprobar":
-                nuevoEstado = await Estado.findOne({ where: { descripcion: "APROBADO" }, transaction });
+                nuevoEstadoProyecto = estadoEnCurso;
+                nuevoEstadoIdea = estadoAprobada;
                 mensaje = "Proyecto aprobado sin observaciones.";
                 break;
 
             case "Aprobar_Con_Observacion":
-                nuevoEstado = await Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction });
+                nuevoEstadoProyecto = proyecto.id_estado; // se mantiene igual
+                nuevoEstadoIdea = estadoStandBy;
                 mensaje = "Proyecto aprobado con observaciones.";
                 break;
 
             case "Rechazar":
-                nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" }, transaction });
-                mensaje = "Proyecto rechazado. El equipo deberá presentar una nueva propuesta.";
+                nuevoEstadoProyecto = estadoCalificado;
 
-                // Desactivar el equipo asociado al proyecto
-                if (lider && lider.equipo) {
-                    lider.equipo.estado = false;
-                    await lider.equipo.save({ transaction });
-                    idEquipoHistorial = lider.equipo.id_equipo;
+                if (proyecto.id_estado === estadoCalificado.id_estado) {
+                    nuevoEstadoIdea = estadoAprobada;
                 } else {
-                    console.warn("No se encontró líder o equipo asociado para desactivar.");
+                    nuevoEstadoIdea = estadoLibre;
+
+                    if (lider && lider.equipo) {
+                        lider.equipo.estado = false;
+                        await lider.equipo.save({ transaction });
+                        idEquipoHistorial = lider.equipo.id_equipo;
+                    }
+
+                    proyecto.Idea.codigo_materia = null;
+                    proyecto.Idea.nombre = null;
+                    proyecto.Idea.periodo = null;
+                    proyecto.Idea.anio = null;
+                    await proyecto.Idea.save({ transaction });
                 }
 
-                proyecto.Idea.codigo_materia = null;
-                proyecto.Idea.nombre = null;
-                proyecto.Idea.periodo = null;
-                proyecto.Idea.anio = null;
-                await proyecto.Idea.save({ transaction });
-
+                mensaje = "Proyecto rechazado. El equipo deberá presentar una nueva propuesta.";
                 break;
         }
 
-        if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
-
-        // 4️⃣ Actualizar el proyecto
-        proyecto.id_estado = nuevoEstado.id_estado;
+        proyecto.id_estado = nuevoEstadoProyecto.id_estado;
         await proyecto.save({ transaction });
 
         if (proyecto.Idea) {
-            proyecto.Idea.id_estado = nuevoEstado.id_estado;
+            proyecto.Idea.id_estado = nuevoEstadoIdea.id_estado;
             await proyecto.Idea.save({ transaction });
         }
 
@@ -888,7 +946,7 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
             idEquipoHistorial = lider.equipo.id_equipo;
         }
 
-        // 5️⃣ Registrar en historial
+        // 🕓 Historial
         const textoObservacion = observacion
             ? `${mensaje} Observaciones: ${observacion}`
             : mensaje;
@@ -897,10 +955,10 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
             {
                 fecha: new Date(),
                 observacion: textoObservacion,
-                id_estado: nuevoEstado.id_estado,
+                id_estado: nuevoEstadoProyecto.id_estado,
                 id_proyecto,
                 codigo_usuario,
-                id_equipo: idEquipoHistorial
+                id_equipo: idEquipoHistorial,
             },
             { transaction }
         );
@@ -1074,30 +1132,21 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
 
         const idea = proyecto.Idea;
 
-        const estadoStandBy = await Estado.findOne({
-            where: { descripcion: "STAND_BY" },
+        const estadoSeleccionado = await Estado.findOne({
+            where: { descripcion: "SELECCIONADO" },
             transaction: t
         });
-        if (!estadoStandBy) throw new Error("No se encontró el estado STAND_BY");
+        if (!estadoSeleccionado)
+            throw new Error("No se encontró el estado SELECCIONADO en la tabla Estado.");
 
-        const equipoExistente = await Equipo.findOne({
-            where: {
-                codigo_materia: grupo.codigo_materia,
-                nombre: grupo.nombre,
-                periodo: grupo.periodo,
-                anio: grupo.anio,
-                estado: true
-            },
-            include: [
-                {
-                    model: IntegranteEquipo,
-                    where: { codigo_usuario, es_lider: true },
-                    required: false
-                }
-            ],
+        const estadoRevision = await Estado.findOne({
+            where: { descripcion: "REVISION" },
             transaction: t
         });
+        if (!estadoRevision)
+            throw new Error("No se encontró el estado REVISION en la tabla Estado.");
 
+        // Crear nuevo equipo
         const equipoAsociado = await Equipo.create(
             {
                 descripcion: `Equipo de ${codigo_usuario}`,
@@ -1120,9 +1169,14 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
             { transaction: t }
         );
 
+        await proyecto.update(
+            { id_estado: estadoSeleccionado.id_estado },
+            { transaction: t }
+        );
+
         await idea.update(
             {
-                id_estado: estadoStandBy.id_estado,
+                id_estado: estadoRevision.id_estado,
                 codigo_usuario,
                 codigo_materia: grupo.codigo_materia,
                 nombre: grupo.nombre,
@@ -1135,9 +1189,9 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
         await HistorialProyecto.create(
             {
                 id_proyecto,
-                id_estado: estadoStandBy.id_estado,
+                id_estado: estadoRevision.id_estado,
                 codigo_usuario,
-                observacion: `El líder ${codigo_usuario} adoptó la propuesta del banco de proyectos.`,
+                observacion: `El líder ${codigo_usuario} adoptó la propuesta del banco de proyectos. Proyecto en estado SELECCIONADO, idea en REVISION.`,
                 fecha: new Date(),
                 id_equipo: equipoAsociado.id_equipo
             },
@@ -1147,7 +1201,7 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
         await t.commit();
 
         return {
-            message: "Propuesta adoptada correctamente",
+            message: "Propuesta adoptada correctamente (Proyecto: SELECCIONADO, Idea: STAND_BY).",
             proyecto,
             equipo: equipoAsociado
         };
@@ -1159,12 +1213,105 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
 }
 
 async function continuarProyecto(idProyecto, codigo_usuario) {
-    // Implementación pendiente
+    const t = await db.transaction();
+    try {
+        const proyecto = await Proyecto.findByPk(idProyecto, {
+            include: [{ model: Idea, as: "Idea" }],
+            transaction: t
+        });
+
+        if (!proyecto) throw new Error("Proyecto no encontrado.");
+        if (!proyecto.Idea) throw new Error("El proyecto no tiene idea asociada.");
+
+        // Verificar que el proyecto esté calificado
+        const estadoCalificado = await Estado.findOne({
+            where: { descripcion: "CALIFICADO" },
+            transaction: t
+        });
+        if (!estadoCalificado) throw new Error("No existe el estado CALIFICADO en la tabla Estado.");
+
+        if (proyecto.id_estado !== estadoCalificado.id_estado) {
+            throw new Error("Solo se pueden continuar proyectos con estado CALIFICADO.");
+        }
+
+        // Cambiar la idea a REVISION
+        const estadoRevision = await Estado.findOne({
+            where: { descripcion: "REVISION" },
+            transaction: t
+        });
+        if (!estadoRevision) throw new Error("No se encontró el estado REVISION.");
+
+        await proyecto.Idea.update(
+            { id_estado: estadoRevision.id_estado },
+            { transaction: t }
+        );
+
+        // Registrar en historial
+        await HistorialProyecto.create(
+            {
+                id_proyecto: idProyecto,
+                id_estado: estadoRevision.id_estado,
+                codigo_usuario,
+                observacion: `El proyecto fue continuado por el usuario ${codigo_usuario}. La idea asociada pasó a estado REVISION.`,
+                fecha: new Date()
+            },
+            { transaction: t }
+        );
+
+        await t.commit();
+
+        return {
+            message: "Proyecto continuado correctamente. La idea pasó a estado STAND_BY.",
+            proyecto
+        };
+    } catch (error) {
+        await t.rollback();
+        throw new Error("Error al continuar proyecto: " + error.message);
+    }
 }
 
-async function listarProyectosParaContinuar() {
-    // Implementación pendiente
+async function obtenerProyectosContinuables(codigo_usuario) {
+    try {
+        const estadoCalificado = await Estado.findOne({
+            where: { descripcion: "CALIFICADO" }
+        });
+        const estadoAprobado = await Estado.findOne({
+            where: { descripcion: "APROBADO" }
+        });
+
+        if (!estadoCalificado || !estadoAprobado) {
+            throw new Error("No se encontraron los estados requeridos (CALIFICADO y/o APROBADO).");
+        }
+
+        const proyectos = await Proyecto.findAll({
+            where: { id_estado: estadoCalificado.id_estado },
+            include: [
+                {
+                    model: Idea,
+                    as: "Idea",
+                    where: {
+                        id_estado: estadoAprobado.id_estado,
+                        codigo_usuario
+                    },
+                    attributes: ["id_idea", "titulo", "id_estado"]
+                }
+            ],
+            attributes: [
+                "id_proyecto",
+                "linea_investigacion",
+                "tecnologias",
+                "palabras_clave",
+                "id_estado"
+            ],
+            order: [["id_proyecto", "DESC"]]
+        });
+
+        return proyectos;
+    } catch (error) {
+        throw new Error("Error al listar proyectos continuables: " + error.message);
+    }
 }
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
@@ -1174,10 +1321,11 @@ export default {
     listarPropuestasLibres,
     adoptarPropuesta,
     continuarProyecto,
-    listarProyectosParaContinuar,
-    listarProyectosDirector, 
+    calificarProyecto,
+    obtenerProyectosContinuables,
+    listarProyectosDirector,
     listarTodosProyectosDeUnEstudiante,
-    listarTodosProyectosDeUnProfesor, 
-    listarTodosProyectosDeUnGrupo    
+    listarTodosProyectosDeUnProfesor,
+    listarTodosProyectosDeUnGrupo
 
 };
