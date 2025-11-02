@@ -1,5 +1,5 @@
 import Usuario from '../models/Usuario.js';
-import admin from "../firebaseAdmin.js";
+import { admin } from "../firebaseAdmin.js";
 import { Op } from 'sequelize';
 import Rol from '../models/Rol.js';
 import Estado from '../models/Estado.js';
