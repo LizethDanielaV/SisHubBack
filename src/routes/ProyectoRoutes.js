@@ -9,7 +9,6 @@ const router = Router();
 /*router.get("/grupo/listar", verificarToken, ProyectoController.listarProyectosPorGrupo);*/
 router.get("/libres", ProyectoController.listarPropuestasLibres);
 router.get("/listar/paraDirector", /* verificarToken, */ ProyectoController.listarParaDirector);
-router.get("/listar/paraDirector", /* verificarToken, */ ProyectoController.listarParaDirector);
 router.get("/listar/porGrupo", ProyectoController.listarTodosProyectosDeUnGrupo);
 router.get("/:id", /* verificarToken, */ ProyectoController.obtenerProyecto);
 router.get("/continuables/:codigo_usuario", ProyectoController.obtenerProyectosContinuables);
