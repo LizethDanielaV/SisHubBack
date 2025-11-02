@@ -133,6 +133,35 @@ async function tieneActividadPorGrupo(codigo_materia, nombre, periodo, anio) {
   }
 }
 
+
+async function obtenerActividadById(id_actividad) {
+    try {
+      const actividad = await Actividad.findByPk(id_actividad, {
+        attributes: [
+          "id_actividad",
+          "titulo",
+          "descripcion",
+          "fecha_inicio",
+          "fecha_cierre",
+          "maximo_integrantes",
+          "codigo_materia",
+          "nombre",
+          "periodo",
+          "anio",
+          "id_tipo_alcance",
+        ],
+      });
+      if (!actividad) {
+        throw new Error("Actividad no encontrada");
+      }
+      return actividad;
+    } catch (error) {
+      throw new Error(
+        "Error al obtener la actividad: " + error.message
+      );
+    }
+}
+  
 export default {
-    crearActividad, editarActividad, tieneActividadPorGrupo
+    crearActividad, editarActividad, tieneActividadPorGrupo, obtenerActividadById
 };
