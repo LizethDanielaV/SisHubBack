@@ -17,6 +17,7 @@ import IdeaRoutes from "./routes/IdeaRoutes.js";
 import EntregableRoutes from "./routes/EntregableRoutes.js";
 import ProyectoRoutes from "./routes/ProyectoRoutes.js";
 import progress from "./routes/progress.js";
+import NotificacionesRoutes from "./routes/NotificacionesRouter.js";
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.use("/api/tipos-alcance", TipoAlcanceRoutes);
 app.use("/api/ideas", IdeaRoutes);
 app.use("/api/entregables", EntregableRoutes);
 app.use("/api/proyectos", ProyectoRoutes);
+app.use("/api/notificaciones", NotificacionesRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
@@ -89,3 +91,4 @@ const PORT = process.env.PORT || process.env.PUERTO || 3000;
 app.listen(PORT, () => {
   console.log(`API escuchando en http://localhost:${PORT}`);
 });
+
