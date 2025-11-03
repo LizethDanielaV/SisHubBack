@@ -31,4 +31,21 @@ async function obetnerNotificacionesUsuario(codigo) {
     }
 }
 
-export default {crearNotificacion, obetnerNotificacionesUsuario };
+async function cambiarEstado(idNotificacion) {
+    if(!idNotificacion){
+        throw new Error("el codigo es vacío");
+    }
+    try {
+        const nofiUsuario = await Notificacion.findByPk(idNotificacion);
+        if(!nofiUsuario){
+            throw new Error("No se encontró la notificacion del usuario");
+        }
+        nofiUsuario.leida = !nofiUsuario.leida;
+        await nofiUsuario.save({field:['leida'] });
+        return nofiUsuario;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export default {crearNotificacion, obetnerNotificacionesUsuario, cambiarEstado };
