@@ -2,18 +2,23 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import dotenv from "dotenv";
-
-import db, { testConnection } from "./db/db.js";
-
+import db, { testConnection, createTables } from "./db/db.js";
+import "./models/index.js";
 // Importar rutas
 import usuarioRoutes from "./routes/usuarios.js";
 import areaRoutes from "./routes/areas.js";
 import materiasRoutes from "./routes/materias.js"
 import grupoRoutes from "./routes/grupos.js";
 import gruposUsuariosRoutes from "./routes/gruposUsuarios.js";
+import actividadRoutes from "./routes/ActividadRoutes.js";
+import EsquemaRoutes from "./routes/EsquemaRoutes.js";
+import TipoAlcanceRoutes from "./routes/TipoAlcanceRoutes.js";
+import IdeaRoutes from "./routes/IdeaRoutes.js";
+import EntregableRoutes from "./routes/EntregableRoutes.js";
+import ProyectoRoutes from "./routes/ProyectoRoutes.js";
 import progress from "./routes/progress.js";
 
-dotenv.config(); 
+dotenv.config();
 
 
 const app = express();
@@ -28,7 +33,7 @@ app.use(cors({
   origin: function (origin, callback) {
     // Permitir requests sin origin (como Postman/Thunder Client)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -36,14 +41,26 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ["GET","PATCH","POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "PATCH", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
 
 // Conectar DB
-testConnection();
+testConnection()
+/*
+async function actualizarTabla() {
+  try {
+    await HistorialProyecto.sync({ alter: true });
+    console.log("tabla actualizada correctamente")
+  } catch (error) {
+    console.log('Error al sincronizar la tabla historial: ' + error.message);
+  }
+};
+
+actualizarTabla();*/
+
 
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
@@ -52,7 +69,12 @@ app.use("/api/materias", materiasRoutes);
 app.use("/api/progress", progress);
 app.use("/api/grupos", grupoRoutes);
 app.use("/api/grupos-usuarios", gruposUsuariosRoutes);
-
+app.use("/api/actividades", actividadRoutes);
+app.use("/api/esquemas", EsquemaRoutes);
+app.use("/api/tipos-alcance", TipoAlcanceRoutes);
+app.use("/api/ideas", IdeaRoutes);
+app.use("/api/entregables", EntregableRoutes);
+app.use("/api/proyectos", ProyectoRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {

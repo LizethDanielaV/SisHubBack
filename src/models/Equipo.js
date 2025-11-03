@@ -1,30 +1,27 @@
 import db from "../db/db.js";
 import { DataTypes } from "sequelize";
-import Proyecto from "./Proyecto.js";
-import Usuario from "./Usuario.js";
+import Grupo from "./Grupo.js";
 
 const Equipo = db.define("equipo", {
     id_equipo: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    rol_equipo: { type: DataTypes.STRING(15) }
+    descripcion: { type: DataTypes.STRING(50) },
+    // Claves foráneas hacia Grupo (compuesta)
+    codigo_materia: { type: DataTypes.STRING(20), allowNull: false },
+    nombre: { type: DataTypes.STRING(1), allowNull: false },
+    periodo: { type: DataTypes.STRING(2), allowNull: false },
+    anio: { type: DataTypes.INTEGER, allowNull: false },
+    estado: { type: DataTypes.BOOLEAN, allowNull: false , defaultValue: true}
 }, {
     timestamps: false,
     freezeTableName: true
 });
 
-//Relacion con proyecto
-Proyecto.hasMany(Equipo, {
-    foreignKey: "id_proyecto"
+// Relación con Grupo (clave compuesta)
+/* Grupo.hasMany(Equipo, {
+    foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
 });
-Equipo.belongsTo(Proyecto, {
-    foreignKey: "id_proyecto"
-});
-
-//relacion con estudiante
-Usuario.hasMany(Equipo, {
-    foreignKey: "codigo_usuario_estudiante"
-});
-Equipo.belongsTo(Usuario, {
-    foreignKey: "codigo_usuario_estudiante"
-});
+Equipo.belongsTo(Grupo, {
+    foreignKey: ["codigo_materia", "nombre", "periodo", "anio"],
+}); */
 
 export default Equipo;
