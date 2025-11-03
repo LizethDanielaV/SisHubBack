@@ -1,4 +1,11 @@
 import EntregableService from "../services/EntregableService.js";
+import Estado from "../models/Estado.js";
+import Actividad from "../models/Actividad.js";
+import Proyecto from "../models/Proyecto.js";
+import Idea from "../models/Idea.js";
+import Equipo from "../models/Equipo.js";
+import IntegrantesEquipo from "../models/IntegrantesEquipo.js";
+import path from "path";
 
 async function obtenerEntregablesPorProyectoYActividad(req, res) {
   try {
@@ -10,7 +17,7 @@ async function obtenerEntregablesPorProyectoYActividad(req, res) {
       });
     }
 
-    const entregables = await Entregable.findAll({
+    const entregables = await EntregableService.findAll({
       where: {
         id_proyecto,
         id_actividad
@@ -47,7 +54,7 @@ async function actualizarEntregable(req, res) {
     }
 
     // Verificar que el entregable existe
-    const entregableExistente = await Entregable.findByPk(id_entregable, {
+    const entregableExistente = await EntregableService.findByPk(id_entregable, {
       include: [{
         model: Proyecto,
         include: [{
