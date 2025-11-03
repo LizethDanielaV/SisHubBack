@@ -62,6 +62,27 @@ const upload = multer({
 
 router.get("/tipos", EntregableController.obtenerTiposEntregable);
 router.post("/crear",/*   verificarToken, verificarRol([3]),  */upload.single('archivo'), EntregableController.crearEntregable);
+router.put(
+  "/:id_entregable",
+  // verificarToken,
+  // verificarRol([3]),
+  upload.single('archivo'),
+  EntregableController.actualizarEntregable
+);
+
+router.get(
+  "/proyecto/:id_proyecto/actividad/:id_actividad",
+  // verificarToken,
+  EntregableController.obtenerEntregablesPorProyectoYActividad
+);
+
+router.post(
+  "/extraer-texto",
+  // verificarToken,
+  upload.single('archivo'),
+  EntregableController.extraerTextoDocumento
+);
+
 router.post("/proyecto/:id_proyecto/enviar-revision",EntregableController.enviarProyectoARevision);
 
 
