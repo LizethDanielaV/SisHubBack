@@ -10,6 +10,8 @@ import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import HistorialIdea from "../models/HistorialIdea.js";
 import db from "../db/db.js";
 import { Op } from 'sequelize';
+import MensajeService from "./MensajeService.js";
+import NotificacionService from "./NotificacionService.js";
 
 async function crearIdea(datosIdea) {
     const transaction = await db.transaction();
@@ -218,6 +220,36 @@ async function crearIdea(datosIdea) {
 
         // 11. COMMIT de la transacción
         await transaction.commit();
+
+        //busco el docente de ese grupo
+        const grupoUsuario = await GrupoUsuario.findOne({
+            where: {
+                codigo_materia: grupo.codigo_materia,
+                nombre: grupo.nombre,
+                periodo: grupo.periodo,
+                anio: grupo.anio
+            },
+            include: [{
+                model: Usuario,
+                where: {
+                    id_rol: 2
+                },
+                attributes: ['codigo'],
+                required: true
+            }]
+        });
+        const mensaje = await MensajeService.crearMensaje(
+            "Solicitud de Revision de Idea", 
+            `El estudiante ${usuario.nombre} ha solicitado la revision de su nueva idea ${nuevaIdea.titulo}.`, 
+            null
+        ); 
+        if (mensaje && mensaje.id_mensaje) {
+            // Solo se crea la notificación si el mensaje se guardó correctamente
+            const notificacion = await NotificacionService.crearNotificacion(
+                grupoUsuario.Usuario.codigo,
+                mensaje.id_mensaje
+            );
+        };
 
     } catch (error) {
         // Solo hacer rollback si la transacción NO se ha completado
