@@ -17,6 +17,7 @@ router.get("/listar/paraDocente/:codigo_docente", ProyectoController.listarTodos
 router.put("/revisar", /* verificarToken, verificarRol([2]), */ ProyectoController.revisarProyecto);
 router.post("/crear/:id", verificarToken, ProyectoController.crearProyectoDesdeIdea);
 router.patch("/:id", /* verificarToken,  */ProyectoController.actualizarProyecto);
+router.put("/:id_idea/rechazar", ProyectoController.rechazarObservacion);
 router.post("/:id_proyecto/calificar", ProyectoController.calificarProyecto);
 router.post("/:id_proyecto/continuar", ProyectoController.continuarProyecto);
 router.patch("/liberar/:idProyecto", ProyectoController.liberarProyecto);

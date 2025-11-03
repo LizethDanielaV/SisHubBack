@@ -698,7 +698,6 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
             throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
         }
 
-        // Cambiar estado según la acción
         let nuevoEstado;
         let mensaje;
 
@@ -735,7 +734,8 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                             codigo_usuario: idea.codigo_usuario,
                             es_lider: true,
                             id_equipo: { [Op.in]: idsEquipos }
-                        }, include: [{ model: Equipo }],
+                        },
+                        include: [{ model: Equipo }],
                         transaction
                     });
 
@@ -746,20 +746,26 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                     }
                 }
 
+                // Cambiar campos de la idea
                 idea.codigo_materia = null;
                 idea.nombre = null;
                 idea.periodo = null;
                 idea.anio = null;
-                await idea.save({ transaction });
+                idea.codigo_usuario = null; // <--- se deja sin usuario
+                // Buscar estado "LIBRE" y asignarlo
+                const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" } });
+                if (!estadoLibre) throw new Error("No se encontró el estado LIBRE.");
+                idea.id_estado = estadoLibre.id_estado;
 
+                await idea.save({ transaction });
                 break;
         }
 
-        if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
-
-        // Actualizar la idea
-        idea.id_estado = nuevoEstado.id_estado;
-        await idea.save({ transaction });
+        if (accion !== "Rechazar") {
+            if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
+            idea.id_estado = nuevoEstado.id_estado;
+            await idea.save({ transaction });
+        }
 
         // Registrar en historial
         const textoObservacion = observacion
@@ -769,10 +775,11 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
         await HistorialIdea.create({
             fecha: new Date(),
             observacion: textoObservacion,
-            id_estado: nuevoEstado.id_estado,
+            id_estado: idea.id_estado,
             id_idea,
             codigo_usuario
         }, { transaction });
+
         await transaction.commit();
         return { message: mensaje, idea };
     } catch (error) {
@@ -780,6 +787,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
         throw new Error("Error al revisar la idea: " + error.message);
     }
 }
+
 
 async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
     const transaction = await db.transaction();
