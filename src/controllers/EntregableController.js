@@ -1,5 +1,157 @@
 import EntregableService from "../services/EntregableService.js";
 
+async function obtenerEntregablesPorProyectoYActividad(req, res) {
+  try {
+    const { id_proyecto, id_actividad } = req.params;
+
+    if (!id_proyecto || !id_actividad) {
+      return res.status(400).json({
+        error: "ID de proyecto e ID de actividad son requeridos"
+      });
+    }
+
+    const entregables = await Entregable.findAll({
+      where: {
+        id_proyecto,
+        id_actividad
+      },
+      include: [
+        { model: Estado, attributes: ['id_estado', 'descripcion'] },
+        { model: Actividad, attributes: ['id_actividad', 'titulo'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    return res.status(200).json(entregables);
+
+  } catch (error) {
+    console.error("Error al obtener entregables:", error);
+    return res.status(500).json({
+      error: "Error al obtener los entregables",
+      detalle: error.message
+    });
+  }
+}
+
+async function actualizarEntregable(req, res) {
+  try {
+    const { id_entregable } = req.params;
+    const { codigo_usuario } = req.body;
+
+    if (!id_entregable) {
+      return res.status(400).json({ error: "ID de entregable requerido" });
+    }
+
+    if (!codigo_usuario) {
+      return res.status(400).json({ error: "Código de usuario requerido" });
+    }
+
+    // Verificar que el entregable existe
+    const entregableExistente = await Entregable.findByPk(id_entregable, {
+      include: [{
+        model: Proyecto,
+        include: [{
+          model: Idea,
+          as: 'Idea'
+        }]
+      }]
+    });
+
+    if (!entregableExistente) {
+      return res.status(404).json({ error: "Entregable no encontrado" });
+    }
+
+    // Verificar que el usuario es miembro del equipo
+    const equipo = await Equipo.findOne({
+      where: { id_equipo: entregableExistente.id_equipo },
+      include: [{
+        model: IntegrantesEquipo,
+        as: 'Integrante_Equipos',
+        where: { codigo_usuario }
+      }]
+    });
+
+    if (!equipo) {
+      return res.status(403).json({
+        error: "No tienes permiso para actualizar este entregable"
+      });
+    }
+
+    // Preparar datos para actualización
+    const datosActualizacion = {
+      id_actividad: entregableExistente.id_actividad,
+      id_equipo: entregableExistente.id_equipo,
+      tipo: entregableExistente.tipo,
+      ...req.body
+    };
+
+    // Procesar archivo si se envió
+    if (req.file) {
+      datosActualizacion.file = req.file;
+    }
+
+    // Usar el servicio para actualizar
+    const entregableActualizado = await EntregableService.actualizarEntregable(
+      id_entregable,
+      datosActualizacion,
+      codigo_usuario
+    );
+
+    return res.status(200).json({
+      message: "Entregable actualizado exitosamente",
+      entregable: entregableActualizado
+    });
+
+  } catch (error) {
+    console.error("Error al actualizar entregable:", error);
+    return res.status(500).json({
+      error: "Error al actualizar el entregable",
+      detalle: error.message
+    });
+  }
+}
+
+async function extraerTextoDocumento(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se proporcionó ningún archivo" });
+    }
+
+    const archivo = req.file;
+    const extension = path.extname(archivo.originalname).toLowerCase();
+
+    let texto = '';
+
+    if (extension === '.pdf') {
+      // Extraer texto de PDF usando pdf-parse
+      const pdfParse = require('pdf-parse');
+      const dataBuffer = archivo.buffer;
+      const data = await pdfParse(dataBuffer);
+      texto = data.text;
+
+    } else if (extension === '.docx' || extension === '.doc') {
+      // Extraer texto de Word usando mammoth
+      const mammoth = require('mammoth');
+      const result = await mammoth.extractRawText({ buffer: archivo.buffer });
+      texto = result.value;
+
+    } else {
+      return res.status(400).json({
+        error: "Formato no soportado. Solo se permiten PDF o Word"
+      });
+    }
+
+    return res.status(200).json({ texto });
+
+  } catch (error) {
+    console.error("Error al extraer texto:", error);
+    return res.status(500).json({
+      error: "Error al procesar el documento",
+      detalle: error.message
+    });
+  }
+}
+
 async function crearEntregable(req, res) {
   try {
     const { 
@@ -141,6 +293,9 @@ async function obtenerTiposEntregable(req, res) {
 }
 
 export default {
+  obtenerEntregablesPorProyectoYActividad, 
+  actualizarEntregable,
+  extraerTextoDocumento,
   crearEntregable,
   enviarProyectoARevision,
   retroalimentarEntregable,
