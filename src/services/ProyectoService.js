@@ -589,9 +589,12 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
         
         const porcentajes = await Promise.all(porcentajesPromises);
         
-        // Construir el resultado con los porcentajes
+        // Construir el resultado con los porcentajes SIN entregables
         const resultado = proyectos.map((p, index) => {
             const proyectoJSON = p.toJSON();
+            // Eliminar el array de entregables
+            delete proyectoJSON.entregables;
+            
             return {
                 ...proyectoJSON,
                 porcentaje: porcentajes[index]
@@ -1378,6 +1381,9 @@ async function verDetalleProyecto(idProyecto){
                 model: Estado, 
                 attributes: ['descripcion']
             }]
+        }, {
+            model: Idea, 
+            attributes: ['titulo', 'problema', 'justificacion', 'objetivo_general', 'objetivos_especificos']
         }
         ]
     });
