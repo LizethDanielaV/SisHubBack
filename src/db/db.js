@@ -40,11 +40,12 @@ export async function testConnection() {
 // Función para crear las tablas
 export async function createTables() {
   try {
-    await db.sync({ force: true });
+    await db.sync({ alter: true });
     console.log("Tablas creadas exitosamente");
   } catch (error) {
     console.error("Error al crear tablas:", error.message);
   }
 }
+
 
 export default db;

@@ -5,6 +5,12 @@
     "database": "railway",
     "host": "yamabiko.proxy.rlwy.net",
     "port": 24781,
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "timezone": "-05:00",
+    "dialectOptions": {
+      "useUTC": false,
+      "dateStrings": true,
+      "typeCast": true
+    }
   }
 }

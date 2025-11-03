@@ -3,7 +3,7 @@ import Area from "../models/Area.js";
 import fs from "fs";
 import csv from "csv-parser";
 import Sequelize from "sequelize";
-
+import { Op } from 'sequelize';
 async function crear(codigo, nombre,semestre, creditos, prerrequisitos, tipo, idArea) {
 
   if (!codigo || !nombre || !creditos ||!semestre  || !idArea || isNaN(creditos) || isNaN(idArea)) {
