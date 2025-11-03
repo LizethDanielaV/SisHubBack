@@ -426,6 +426,7 @@ async function listarGruposPorUsuario(codigo_usuario) {
       INNER JOIN Materia m ON m.codigo = g.codigo_materia
       LEFT JOIN Area a ON a.id_area = m.id_area
       WHERE gu.codigo_usuario = :codigo_usuario
+      AND gu.estado = true
       ORDER BY g.anio DESC, g.periodo DESC;
       `,
       {

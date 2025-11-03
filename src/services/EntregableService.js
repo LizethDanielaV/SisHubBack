@@ -29,6 +29,53 @@ const TIPOS_ENTREGABLE = {
     IMAGEN: 'IMAGEN'
 };
 
+async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad) {
+    try {
+        const entregables = await Entregable.findAll({
+            where: {
+                id_proyecto,
+                id_actividad
+            },
+            include: [
+                { model: Estado, attributes: ['id_estado', 'descripcion'] },
+                { model: Actividad, attributes: ['id_actividad', 'titulo'] },
+                { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
+                { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        return entregables || [];
+    } catch (error) {
+        console.error("Error en servicio al obtener entregables:", error);
+        throw error;
+    }
+}
+
+async function obtenerEntregablePorId(id_entregable) {
+    try {
+        const entregable = await Entregable.findByPk(id_entregable, {
+            include: [
+                { 
+                    model: Proyecto,
+                    include: [{
+                        model: Idea,
+                        as: 'Idea'
+                    }]
+                },
+                { model: Estado },
+                { model: Actividad },
+                { model: Equipo }
+            ]
+        });
+
+        return entregable;
+    } catch (error) {
+        console.error("Error en servicio al obtener entregable:", error);
+        throw error;
+    }
+}
+
 async function validarEquipoTieneProyecto(id_equipo) {
     const equipo = await Equipo.findByPk(id_equipo);
     if (!equipo) throw new Error("Equipo no encontrado");
@@ -517,6 +564,9 @@ async function retroalimentarEntregable(id_entregable, comentarios, calificacion
 }
 
 export default {
+    obtenerEntregablesPorProyectoYActividad,
+    obtenerEntregablePorId,
+    validarEquipoTieneProyecto,
     actualizarEntregable,
     crearEntregable,
     enviarProyectoARevision,

@@ -757,6 +757,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
 
         if (!nuevoEstado) throw new Error("No se encontró el estado correspondiente.");
 
+        // Actualizar la idea
         idea.id_estado = nuevoEstado.id_estado;
         await idea.save({ transaction });
 

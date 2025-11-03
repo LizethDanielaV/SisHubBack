@@ -16,6 +16,7 @@ import TipoAlcanceRoutes from "./routes/TipoAlcanceRoutes.js";
 import IdeaRoutes from "./routes/IdeaRoutes.js";
 import EntregableRoutes from "./routes/EntregableRoutes.js";
 import ProyectoRoutes from "./routes/ProyectoRoutes.js";
+import progress from "./routes/progress.js";
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ actualizarTabla();*/
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/materias", materiasRoutes);
+app.use("/api/progress", progress);
 app.use("/api/grupos", grupoRoutes);
 app.use("/api/grupos-usuarios", gruposUsuariosRoutes);
 app.use("/api/actividades", actividadRoutes);
