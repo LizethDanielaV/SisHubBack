@@ -475,7 +475,31 @@ async function listarProyectosDirector() {
                 }
             ],
         });
-        return proyectos;
+        // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p => 
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retornar 0 si hay error
+            })
+        );
+
+        const porcentajes = await Promise.all(porcentajesPromises);
+        
+        // Construir el resultado con los porcentajes
+        const resultado = proyectos.map((p, index) => ({
+            id_proyecto: p.id_proyecto,
+            linea_investigacion: p.linea_investigacion,
+            tecnologias: p.tecnologias,
+            palabras_clave: p.palabras_clave,
+            fecha_creacion: p.fecha_creacion,
+            porcentaje: porcentajes[index],
+            TipoAlcance: p.TipoAlcance,
+            Idea: p.Idea,
+            Estado: p.Estado
+        }));
+        
+        return resultado;
+       // return proyectos;
     } catch (error) {
         throw new Error("Error al obtener los proyectos " + error.message);
     }
@@ -554,7 +578,28 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                 }
             ]
         });
-        return proyectos;
+
+        // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p => 
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retornar 0 si hay error
+            })
+        );
+        
+        const porcentajes = await Promise.all(porcentajesPromises);
+        
+        // Construir el resultado con los porcentajes
+        const resultado = proyectos.map((p, index) => {
+            const proyectoJSON = p.toJSON();
+            return {
+                ...proyectoJSON,
+                porcentaje: porcentajes[index]
+            };
+        });
+        
+        return resultado;
+       // return proyectos;
     } catch (error) {
         throw new Error("Error al obtener los proyectos: " + error.message);
     }
@@ -620,7 +665,18 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 }
             ]
         });
-        const resultado = proyectos.map(proyecto => {
+        // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p => 
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retornar 0 si hay error
+            })
+        );
+        
+        const porcentajes = await Promise.all(porcentajesPromises);
+        
+        // Mapear resultado con porcentaje
+        const resultado = proyectos.map((proyecto, index) => {
             // obtener materias asociadas (sin duplicados)
             const materias = [];
 
@@ -636,11 +692,14 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 linea_investigacion: proyecto.linea_investigacion,
                 tecnologias: proyecto.tecnologias,
                 fecha_creacion: proyecto.fecha_creacion,
+                porcentaje: porcentajes[index], // <-- Porcentaje añadido
                 Tipo_alcance: proyecto.TipoAlcance,
+                Estado: proyecto.Estado,
                 Idea: proyecto.Idea,
                 materias: materias
             };
         });
+        
         return resultado;
     } catch (error) {
         throw new Error("Error al obtener los proyectos: " + error.message);
@@ -695,14 +754,28 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
                 }
             ]
         });
-        const resultado = proyectos.map(p => ({
+        // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p => 
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retornar 0 si hay error
+            })
+        );
+        
+        const porcentajes = await Promise.all(porcentajesPromises);
+        
+        // Mapear resultado con porcentaje
+        const resultado = proyectos.map((p, index) => ({
             id_proyecto: p.id_proyecto,
             linea_investigacion: p.linea_investigacion,
             tecnologias: p.tecnologias,
             fecha_creacion: p.fecha_creacion,
+            porcentaje: porcentajes[index], // <-- Porcentaje añadido
             Tipo_alcance: p.TipoAlcance,
+            Estado: p.Estado,
             Idea: p.Idea
         }));
+        
         return resultado;
     } catch (error) {
         throw new Error("Error al obtener los proyectos: " + error.message);
