@@ -467,7 +467,11 @@ async function listarProyectosDirector() {
             }, {
                 model: Idea,
                 attributes: ['objetivo_general', 'titulo' ]
-            }],
+            },{
+                model: Estado, 
+                attributes: ['descripcion']
+                }
+            ],
         });
         return proyectos;
     } catch (error) {
@@ -487,6 +491,10 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                 {
                     model: Idea,
                     attributes: ['titulo', 'objetivo_general']
+                },
+                {
+                    model: Estado, 
+                    attributes: ['descripcion']
                 },
                 {
                     model: Entregable,
@@ -558,6 +566,10 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 {
                     model: TipoAlcance,
                     attributes: ['nombre']
+                },
+                {
+                    model: Estado, 
+                    attributes: ['descripcion']
                 },
                 {
                     model: Idea,
@@ -641,6 +653,10 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
                 {
                     model: TipoAlcance,
                     attributes: ['nombre']
+                },
+                {
+                    model: Estado, 
+                    attributes: ['descripcion']
                 },
                 {
                     model: Idea,
