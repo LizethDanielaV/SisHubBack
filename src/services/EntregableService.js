@@ -29,9 +29,6 @@ const TIPOS_ENTREGABLE = {
     IMAGEN: 'IMAGEN'
 };
 
-/**
- * Valida que el equipo tenga un proyecto asociado
- */
 async function validarEquipoTieneProyecto(id_equipo) {
     const equipo = await Equipo.findByPk(id_equipo);
     if (!equipo) throw new Error("Equipo no encontrado");
@@ -58,9 +55,6 @@ async function validarEquipoTieneProyecto(id_equipo) {
     return { equipo, proyecto };
 }
 
-/**
- * Obtiene los ítems requeridos para una actividad
- */
 async function obtenerItemsRequeridos(id_actividad) {
     const itemsRequeridos = await ActividadItem.findAll({
         where: { id_actividad },
@@ -73,9 +67,6 @@ async function obtenerItemsRequeridos(id_actividad) {
     return itemsRequeridos.map(ai => ai.Item.nombre.toUpperCase());
 }
 
-/**
- * Valida que el tipo de entregable sea válido según la actividad
- */
 async function validarTipoEntregable(id_actividad, tipo) {
     const actividad = await Actividad.findByPk(id_actividad, {
         include: [{
@@ -114,12 +105,6 @@ async function validarTipoEntregable(id_actividad, tipo) {
     return actividad;
 }
 
-/**
- * Procesa y sube un archivo según su tipo
- */
-/**
- * Procesa y sube un archivo según su tipo
- */
 async function procesarArchivo(tipo, datos) {
     let url_archivo = null;
     let nombre_archivo = null;
@@ -208,9 +193,6 @@ async function procesarArchivo(tipo, datos) {
     }
 }
 
-/**
- * Crea un nuevo entregable
- */
 async function crearEntregable(datosEntregable, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -294,10 +276,6 @@ async function crearEntregable(datosEntregable, codigo_usuario) {
     }
 }
 
-
-/**
- * Envía el proyecto a revisión (cuando ya hay entregables)
- */
 async function enviarProyectoARevision(id_proyecto, id_actividad, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -406,6 +384,90 @@ async function enviarProyectoARevision(id_proyecto, id_actividad, codigo_usuario
     }
 }
 
+async function actualizarEntregable(id_entregable, datosEntregable, codigo_usuario) {
+  const transaction = await db.transaction();
+
+  try {
+    if (!id_entregable) throw new Error("ID de entregable requerido");
+    if (!codigo_usuario) throw new Error("Código de usuario requerido");
+
+    // Obtener entregable existente
+    const entregable = await Entregable.findByPk(id_entregable, {
+      include: [
+        { model: Proyecto },
+        { model: Actividad }
+      ],
+      transaction
+    });
+
+    if (!entregable) throw new Error("Entregable no encontrado");
+
+    // Verificar que es miembro del equipo
+    const integrante = await IntegrantesEquipo.findOne({
+      where: {
+        id_equipo: entregable.id_equipo,
+        codigo_usuario
+      },
+      transaction
+    });
+
+    if (!integrante) {
+      throw new Error("No eres miembro de este equipo");
+    }
+
+    // Validar que la actividad no haya cerrado
+    const actividad = entregable.Actividad;
+    const hoy = new Date();
+    const fechaCierre = new Date(actividad.fecha_cierre);
+
+    if (hoy > fechaCierre) {
+      throw new Error("La actividad ya cerró. No se pueden actualizar entregables");
+    }
+
+    const { tipo, ...datosProcesamiento } = datosEntregable;
+
+    // Procesar nuevo archivo/URL
+    const { url_archivo, nombre_archivo } = await procesarArchivo(
+      tipo.toUpperCase(),
+      { ...datosProcesamiento, id_entregable }
+    );
+
+    // Actualizar entregable
+    entregable.url_archivo = url_archivo;
+    entregable.nombre_archivo = nombre_archivo;
+    await entregable.save({ transaction });
+
+    // Registrar en historial
+    const estadoRevision = await Estado.findOne({
+      where: { descripcion: 'REVISION' },
+      transaction
+    });
+
+    await HistorialEntregable.create({
+      id_entregable,
+      id_estado: estadoRevision.id_estado,
+      codigo_usuario,
+      observacion: `Entregable de tipo ${tipo} actualizado por ${codigo_usuario}`
+    }, { transaction });
+
+    await transaction.commit();
+
+    // Retornar con datos actualizados
+    return await Entregable.findByPk(id_entregable, {
+      include: [
+        { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
+        { model: Equipo, attributes: ['id_equipo', 'descripcion'] },
+        { model: Actividad, attributes: ['id_actividad', 'titulo'] },
+        { model: Estado, attributes: ['descripcion'] }
+      ]
+    });
+
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    throw error;
+  }
+}
+
 async function retroalimentarEntregable(id_entregable, comentarios, calificacion, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -455,6 +517,7 @@ async function retroalimentarEntregable(id_entregable, comentarios, calificacion
 }
 
 export default {
+    actualizarEntregable,
     crearEntregable,
     enviarProyectoARevision,
     retroalimentarEntregable,
