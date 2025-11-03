@@ -409,6 +409,16 @@ async function verDetalleProyecto(req, res) {
   }
 }
 
+async function calcularAvanceProyecto(req, res) {
+  try {
+    const proyecto = await ProyectoService.calcularAvanceProyecto(req.params.id_proyecto);
+    res.json(proyecto);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
@@ -428,5 +438,6 @@ export default {
     obtenerProyectosContinuables,
     continuarProyecto, 
     verDetalleProyecto, 
-    generarHistorialProyecto
+    generarHistorialProyecto, 
+    calcularAvanceProyecto
 };

@@ -1360,6 +1360,45 @@ async function generarHistorialProyecto(idProyecto){
       }
 }
 
+async function calcularAvanceProyecto(idProyecto) {
+    if (!idProyecto || isNaN(idProyecto)) {
+        throw new Error("El id no es válido");
+      }
+    try {
+        const proyecto = await Proyecto.findOne({
+            where: { id_proyecto: idProyecto },
+            attributes: ['id_tipo_alcance'],
+            include: [{
+                model: Entregable, 
+                attributes: ['tipo']
+            }]
+        });
+        let porcentaje = 0;
+        if(proyecto.id_tipo_alcance == 2){
+            const tipos = proyecto.entregables.map(e => e.tipo.toUpperCase());
+            const tieneRepositorio = tipos.includes("REPOSITORIO");
+            const tieneVideo = tipos.includes("VIDEO");
+
+            if (tieneRepositorio && tieneVideo) {
+                porcentaje = 100;
+            } else if (tieneRepositorio || tieneVideo) {
+                porcentaje = 50;
+            } else {
+                porcentaje = 0;
+            };
+
+        }else if(proyecto.id_tipo_alcance == 1){
+            const tipos = proyecto.entregables.map(e => e.tipo.toUpperCase());
+            const tieneDocumento = tipos.includes("DOCUMENTO");
+            if(tieneDocumento){
+                porcentaje=100
+            }
+        }
+        return porcentaje;
+    } catch (error) {
+        throw new Error("Error al obtener el proyecto " + error.message);
+    }
+}
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
@@ -1376,6 +1415,7 @@ export default {
     listarTodosProyectosDeUnProfesor,
     listarTodosProyectosDeUnGrupo, 
     verDetalleProyecto, 
-    generarHistorialProyecto
+    generarHistorialProyecto,
+    calcularAvanceProyecto
 
 };
