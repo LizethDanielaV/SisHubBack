@@ -4,7 +4,7 @@ import Usuario from '../models/Usuario.js';
 import Rol from '../models/Rol.js';
 import Estado from '../models/Estado.js';
 import UsuarioService from "../services/UsuarioService.js";
-import admin from "../firebaseAdmin.js";
+import { admin } from "../firebaseAdmin.js";
 import { Op } from 'sequelize';
 import { progressService } from "../services/progressService.js";
 import db from "../db/db.js";
