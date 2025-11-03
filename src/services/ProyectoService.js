@@ -498,7 +498,7 @@ async function listarProyectosDirector() {
             Estado: p.Estado
         }));
         
-        return proyectos;
+        return resultado;
        // return proyectos;
     } catch (error) {
         throw new Error("Error al obtener los proyectos " + error.message);
