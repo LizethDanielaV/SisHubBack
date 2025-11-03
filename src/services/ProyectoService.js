@@ -493,12 +493,12 @@ async function listarProyectosDirector() {
             palabras_clave: p.palabras_clave,
             fecha_creacion: p.fecha_creacion,
             porcentaje: porcentajes[index],
-            TipoAlcance: p.TipoAlcance,
+            TipoAlcance: p.Tipo_alcance,
             Idea: p.Idea,
             Estado: p.Estado
         }));
         
-        return resultado;
+        return proyectos;
        // return proyectos;
     } catch (error) {
         throw new Error("Error al obtener los proyectos " + error.message);
@@ -692,8 +692,8 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 linea_investigacion: proyecto.linea_investigacion,
                 tecnologias: proyecto.tecnologias,
                 fecha_creacion: proyecto.fecha_creacion,
-                porcentaje: porcentajes[index], // <-- Porcentaje añadido
-                Tipo_alcance: proyecto.TipoAlcance,
+                porcentaje: porcentajes[index], 
+                Tipo_alcance: proyecto.Tipo_alcance,
                 Estado: proyecto.Estado,
                 Idea: proyecto.Idea,
                 materias: materias
@@ -770,8 +770,8 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
             linea_investigacion: p.linea_investigacion,
             tecnologias: p.tecnologias,
             fecha_creacion: p.fecha_creacion,
-            porcentaje: porcentajes[index], // <-- Porcentaje añadido
-            Tipo_alcance: p.TipoAlcance,
+            porcentaje: porcentajes[index], 
+            Tipo_alcance: p.Tipo_alcance,
             Estado: p.Estado,
             Idea: p.Idea
         }));
