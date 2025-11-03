@@ -13,7 +13,9 @@ import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import db from "../db/db.js";
 import Grupo from "../models/Grupo.js";
 import Materia from "../models/Materia.js";
+import ActividadItem from "../models/ActividadItem.js";
 import { Op } from 'sequelize';
+import Item from "../models/Item.js";
 
 async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -1365,40 +1367,80 @@ async function calcularAvanceProyecto(idProyecto) {
         throw new Error("El id no es válido");
       }
     try {
+        let porcentaje = 0;
         const proyecto = await Proyecto.findOne({
             where: { id_proyecto: idProyecto },
-            attributes: ['id_tipo_alcance'],
-            include: [{
-                model: Entregable, 
-                attributes: ['tipo']
-            }]
+            attributes: ['id_tipo_alcance']
         });
-        let porcentaje = 0;
-        if(proyecto.id_tipo_alcance == 2){
-            const tipos = proyecto.entregables.map(e => e.tipo.toUpperCase());
-            const tieneRepositorio = tipos.includes("REPOSITORIO");
-            const tieneVideo = tipos.includes("VIDEO");
 
-            if (tieneRepositorio && tieneVideo) {
-                porcentaje = 100;
-            } else if (tieneRepositorio || tieneVideo) {
-                porcentaje = 50;
-            } else {
-                porcentaje = 0;
-            };
+        // Obtener el id_actividad de la última actividad de un proyecto
+        const ultimoEntregable = await Entregable.findOne({
+            where: {
+                id_proyecto: idProyecto
+            },
+            order: [['fecha_subida', 'DESC']],
+            attributes: ['id_actividad', 'fecha_subida']
+        });
+        //console.log(ultimoEntregable.id_actividad);
 
-        }else if(proyecto.id_tipo_alcance == 1){
-            const tipos = proyecto.entregables.map(e => e.tipo.toUpperCase());
+        //traigo todos los entregables de esa actividad y ese proyecto
+        const entregables = await Entregable.findAll({
+            where: {
+                id_proyecto: idProyecto, 
+                id_actividad: ultimoEntregable.id_actividad
+            }, 
+            attributes: ['tipo']
+        });
+
+        if(proyecto.id_tipo_alcance==1){
+            const tipos = entregables.map(e => e.tipo.toUpperCase());
             const tieneDocumento = tipos.includes("DOCUMENTO");
             if(tieneDocumento){
-                porcentaje=100
+                porcentaje=100;
             }
+        }else if(proyecto.id_tipo_alcance == 2){
+            //traigo todos los items de esa actividad
+            const items = await ActividadItem.findAll({
+            where: {
+                id_actividad: ultimoEntregable.id_actividad
+            }, 
+            include: [{
+                model: Item, 
+                attributes: ['nombre']
+            }]
+            });
+            porcentaje = calcularPorcentajeEntregables(items, entregables);
         }
         return porcentaje;
     } catch (error) {
         throw new Error("Error al obtener el proyecto " + error.message);
     }
 }
+
+// Función para calcular el porcentaje de completitud
+function calcularPorcentajeEntregables(items, entregables) {
+  // Si no hay items requeridos, el porcentaje es 100%
+  if (!items || items.length === 0) {
+    return 100;
+  }
+
+  // Extraer los tipos únicos de items requeridos
+  const itemsRequeridos = [...new Set(items.map(item => item.Item.nombre))];
+  
+  // Extraer los tipos únicos de entregables enviados
+  const tiposEntregados = [...new Set(entregables.map(e => e.tipo))];
+  
+  // Contar cuántos items requeridos fueron cumplidos
+  const itemsCumplidos = itemsRequeridos.filter(itemRequerido => 
+    tiposEntregados.includes(itemRequerido)
+  );
+  
+  // Calcular porcentaje
+  const porcentaje = (itemsCumplidos.length / itemsRequeridos.length) * 100;
+  
+  return porcentaje;
+}
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
