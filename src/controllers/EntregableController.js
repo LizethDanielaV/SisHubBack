@@ -1,8 +1,4 @@
 import EntregableService from "../services/EntregableService.js";
-import Estado from "../models/Estado.js";
-import Actividad from "../models/Actividad.js";
-import Proyecto from "../models/Proyecto.js";
-import Idea from "../models/Idea.js";
 import Equipo from "../models/Equipo.js";
 import IntegrantesEquipo from "../models/IntegrantesEquipo.js";
 import path from "path";
@@ -17,17 +13,10 @@ async function obtenerEntregablesPorProyectoYActividad(req, res) {
       });
     }
 
-    const entregables = await EntregableService.findAll({
-      where: {
-        id_proyecto,
-        id_actividad
-      },
-      include: [
-        { model: Estado, attributes: ['id_estado', 'descripcion'] },
-        { model: Actividad, attributes: ['id_actividad', 'titulo'] }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
+    const entregables = await EntregableService.obtenerEntregablesPorProyectoYActividad(
+      id_proyecto,
+      id_actividad
+    );
 
     return res.status(200).json(entregables);
 
@@ -53,22 +42,13 @@ async function actualizarEntregable(req, res) {
       return res.status(400).json({ error: "Código de usuario requerido" });
     }
 
-    // Verificar que el entregable existe
-    const entregableExistente = await EntregableService.findByPk(id_entregable, {
-      include: [{
-        model: Proyecto,
-        include: [{
-          model: Idea,
-          as: 'Idea'
-        }]
-      }]
-    });
+    const entregableExistente = await EntregableService.obtenerEntregablePorId(id_entregable);
 
     if (!entregableExistente) {
       return res.status(404).json({ error: "Entregable no encontrado" });
     }
 
-    // Verificar que el usuario es miembro del equipo
+    // Verificar permisos (esta lógica podría ir al servicio también)
     const equipo = await Equipo.findOne({
       where: { id_equipo: entregableExistente.id_equipo },
       include: [{
@@ -84,36 +64,31 @@ async function actualizarEntregable(req, res) {
       });
     }
 
-    // Preparar datos para actualización
+    // Preparar datos
     const datosActualizacion = {
       id_actividad: entregableExistente.id_actividad,
       id_equipo: entregableExistente.id_equipo,
       tipo: entregableExistente.tipo,
-      ...req.body
+      esUrl: req.body.esUrl === 'true' || req.body.esUrl === true,
+      url_video: req.body.url_video,
+      url_audio: req.body.url_audio,
+      url_repositorio: req.body.url_repositorio,
+      url_imagen: req.body.url_imagen,
+      file: req.file
     };
 
-    // Procesar archivo si se envió
-    if (req.file) {
-      datosActualizacion.file = req.file;
-    }
-
-    // Usar el servicio para actualizar
     const entregableActualizado = await EntregableService.actualizarEntregable(
       id_entregable,
       datosActualizacion,
       codigo_usuario
     );
 
-    return res.status(200).json({
-      message: "Entregable actualizado exitosamente",
-      entregable: entregableActualizado
-    });
+    return res.status(200).json(entregableActualizado);
 
   } catch (error) {
     console.error("Error al actualizar entregable:", error);
     return res.status(500).json({
-      error: "Error al actualizar el entregable",
-      detalle: error.message
+      error: error.message || "Error al actualizar el entregable"
     });
   }
 }
