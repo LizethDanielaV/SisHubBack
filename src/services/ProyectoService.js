@@ -517,7 +517,7 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                 {
                     model: Idea,
                     attributes: ['titulo', 'objetivo_general'],
-                    inclide: [{
+                    include: [{
                         model: Estado,
                         attributes: ['descripcion']
                     }]
