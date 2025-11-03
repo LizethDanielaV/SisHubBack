@@ -1065,6 +1065,81 @@ async function listarPropuestasLibres() {
   }
 }
 
+export async function rechazarObservacion(id_idea, codigo_usuario) {
+  const transaction = await db.transaction();
+  try {
+    if (!codigo_usuario)
+      throw new Error("Debe especificar el código del usuario que realiza la revisión.");
+
+    const idea = await Idea.findByPk(id_idea, {
+      include: [{ model: Proyecto }],
+      transaction,
+    });
+    if (!idea) throw new Error("Idea no encontrada.");
+
+    if (!idea.Proyecto) throw new Error("No hay proyecto asociado a esta idea.");
+
+    const proyecto = idea.Proyecto;
+
+    // 🔹 Buscar estados necesarios
+    const estadoSeleccionado = await Estado.findOne({ where: { descripcion: "SELECCIONADO" }, transaction });
+    const estadoCalificado = await Estado.findOne({ where: { descripcion: "CALIFICADO" }, transaction });
+    const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction });
+    const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" }, transaction });
+    const estadoAprobado = await Estado.findOne({ where: { descripcion: "APROBADO" }, transaction });
+
+    if (!estadoSeleccionado || !estadoCalificado || !estadoStandBy || !estadoLibre || !estadoAprobado)
+      throw new Error("No se encontraron los estados requeridos.");
+
+    let nuevoEstadoProyecto = proyecto.id_estado;
+    let nuevoEstadoIdea = idea.id_estado;
+    let mensaje = "";
+
+    // 🔁 Lógica de cambio de estados
+    if (proyecto.id_estado === estadoSeleccionado.id_estado) {
+      nuevoEstadoProyecto = estadoCalificado;
+      if (idea.id_estado === estadoStandBy.id_estado) {
+        nuevoEstadoIdea = estadoLibre;
+      }
+      mensaje = "Proyecto rechazado. Pasó de SELECCIONADO a CALIFICADO. La idea quedó LIBRE.";
+    } 
+    else if (proyecto.id_estado === estadoCalificado.id_estado) {
+      nuevoEstadoProyecto = estadoCalificado; // se mantiene
+      if (idea.id_estado === estadoStandBy.id_estado) {
+        nuevoEstadoIdea = estadoAprobado;
+      }
+      mensaje = "Proyecto rechazado (mantiene estado CALIFICADO). La idea pasó a APROBADO.";
+    } 
+    else {
+      mensaje = "El proyecto no se encontraba en un estado válido para rechazo.";
+    }
+
+    // 🔹 Guardar cambios
+    proyecto.id_estado = nuevoEstadoProyecto.id_estado;
+    await proyecto.save({ transaction });
+
+    idea.id_estado = nuevoEstadoIdea.id_estado;
+    await idea.save({ transaction });
+
+    // 🔹 Registrar historial
+    await HistorialProyecto.create({
+      fecha: new Date(),
+      observacion:
+        "El estudiante decidió no corregir las observaciones del profesor para continuar el proyecto.",
+      id_estado: nuevoEstadoProyecto.id_estado,
+      id_proyecto: proyecto.id_proyecto,
+      codigo_usuario,
+    }, { transaction });
+
+    await transaction.commit();
+    return { message: mensaje, proyecto, idea };
+
+  } catch (error) {
+    await transaction.rollback();
+    throw new Error("Error al rechazar la observación: " + error.message);
+  }
+}
+
 
 async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
     const t = await db.transaction();
@@ -1416,6 +1491,6 @@ export default {
     listarTodosProyectosDeUnGrupo, 
     verDetalleProyecto, 
     generarHistorialProyecto,
-    calcularAvanceProyecto
-
+    calcularAvanceProyecto,
+    rechazarObservacion
 };

@@ -37,12 +37,12 @@ async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad
                 id_actividad
             },
             include: [
-                { model: Estado, attributes: ['id_estado', 'descripcion'] },
+                { model: Estado, attributes: ['id_estado', 'descripcion'], where: { descripcion: 'REVISION' } },
                 { model: Actividad, attributes: ['id_actividad', 'titulo'] },
                 { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
                 { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
             ],
-            order: [['createdAt', 'DESC']]
+            order: [['fecha_subida', 'DESC']] 
         });
 
         return entregables || [];
@@ -56,14 +56,15 @@ async function obtenerEntregablePorId(id_entregable) {
     try {
         const entregable = await Entregable.findByPk(id_entregable, {
             include: [
-                { 
+                {
                     model: Proyecto,
                     include: [{
                         model: Idea,
                         as: 'Idea'
-                    }]
+                    }],
                 },
-                { model: Estado },
+                { model: Estado, attributes: ['id_estado', 'descripcion'],
+                    where: { descripcion: 'REVISION' }},
                 { model: Actividad },
                 { model: Equipo }
             ]
@@ -158,7 +159,7 @@ async function procesarArchivo(tipo, datos) {
     let archivoTemporal = null;
 
     try {
-        const timestamp = Date.now(); // identificador único por tiempo
+        const timestamp = Date.now();
 
         switch (tipo) {
             case TIPOS_ENTREGABLE.DOCUMENTO:
@@ -170,7 +171,21 @@ async function procesarArchivo(tipo, datos) {
                     'documentos'
                 );
                 break;
-
+            case TIPOS_ENTREGABLE.REPOSITORIO:
+                if (datos.esUrl) {
+                    if (!datos.url_repositorio) throw new Error("URL del repositorio requerida");
+                    url_archivo = datos.url_repositorio;
+                    nombre_archivo = `repositorio_${timestamp}.url`;
+                } else {
+                    if (!datos.file) throw new Error("No se proporcionó el archivo ZIP del repositorio");
+                    nombre_archivo = `repositorio_${timestamp}.zip`;
+                    url_archivo = await subirArchivoAFirebase(
+                        datos.file.buffer,
+                        nombre_archivo,
+                        'repositorios'
+                    );
+                }
+                break;
             case TIPOS_ENTREGABLE.VIDEO:
                 if (datos.esUrl) {
                     if (!datos.url_video) throw new Error("URL del video requerida");
@@ -201,20 +216,6 @@ async function procesarArchivo(tipo, datos) {
                         'audios'
                     );
                 }
-                break;
-
-            case TIPOS_ENTREGABLE.REPOSITORIO:
-                if (!datos.url_repositorio) throw new Error("URL del repositorio requerida");
-
-                console.log('🔄 Procesando repositorio...');
-                const repoPath = await clonarRepositorio(datos.url_repositorio);
-                const zipPath = await comprimirCarpeta(repoPath);
-
-                if (!fs.existsSync(zipPath)) throw new Error('El archivo ZIP no se creó correctamente');
-
-                nombre_archivo = `repositorio_${timestamp}.zip`;
-                url_archivo = await subirArchivoAFirebase(zipPath, nombre_archivo, 'repositorios');
-                archivoTemporal = [repoPath, zipPath];
                 break;
 
             case TIPOS_ENTREGABLE.IMAGEN:
@@ -264,10 +265,14 @@ async function crearEntregable(datosEntregable, codigo_usuario) {
 
         const hoy = new Date();
         const fechaInicio = new Date(actividad.fecha_inicio);
-        const fechaCierre = new Date(actividad.fecha_cierre);
+        const fechaCierre = actividad.fecha_cierre ? new Date(actividad.fecha_cierre) : null;
 
         if (hoy < fechaInicio) throw new Error("La actividad aún no ha iniciado");
-        if (hoy > fechaCierre) throw new Error("La actividad ya cerró. No se pueden subir más entregables");
+        
+        // Solo validar fecha de cierre si existe
+        if (fechaCierre && hoy > fechaCierre) {
+            throw new Error("La actividad ya cerró. No se pueden subir más entregables");
+        }
 
         const estadoRevision = await Estado.findOne({
             where: { descripcion: 'REVISION' }
@@ -283,7 +288,8 @@ async function crearEntregable(datosEntregable, codigo_usuario) {
             id_proyecto: proyecto.id_proyecto,
             id_equipo,
             id_actividad,
-            id_estado: estadoRevision.id_estado
+            id_estado: estadoRevision.id_estado,
+            fecha_subida: new Date()
         }, { transaction });
 
         // 2️⃣ Procesar archivo y subirlo usando el id_entregable
@@ -308,7 +314,7 @@ async function crearEntregable(datosEntregable, codigo_usuario) {
         await transaction.commit();
 
         // 5️⃣ Retornar con datos actualizados
-        return await Entregable.findByPk(nuevoEntregable.id_entregable, {
+        const entregableCompleto = await Entregable.findByPk(nuevoEntregable.id_entregable, {
             include: [
                 { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
                 { model: Equipo, attributes: ['id_equipo', 'descripcion'] },
@@ -317,203 +323,180 @@ async function crearEntregable(datosEntregable, codigo_usuario) {
             ]
         });
 
+        // Formatear fecha para el frontend
+        if (entregableCompleto.fecha_subida) {
+            entregableCompleto.fecha_subida_formateada = new Date(entregableCompleto.fecha_subida).toLocaleDateString('es-CO', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        return entregableCompleto;
+
     } catch (error) {
         if (!transaction.finished) await transaction.rollback();
         throw error;
     }
 }
 
-async function enviarProyectoARevision(id_proyecto, id_actividad, codigo_usuario) {
+async function actualizarEntregable(id_entregable, datosEntregable, codigo_usuario) {
     const transaction = await db.transaction();
-
+    console.log(id_entregable);
     try {
-        // Validar proyecto
-        const proyecto = await Proyecto.findByPk(id_proyecto, {
-            include: [{
-                model: Idea,
-                as: 'Idea',
-                include: [{ model: Estado, as: 'Estado' }]
-            }]
+        if (!id_entregable) throw new Error("ID de entregable requerido");
+        if (!codigo_usuario) throw new Error("Código de usuario requerido");
+
+        const entregable = await Entregable.findByPk(id_entregable, {
+            include: [
+                { model: Proyecto },
+                { model: Actividad }
+            ],
+            transaction
         });
+        console.log(entregable);
+        if (!entregable) throw new Error("Entregable no encontrado");
 
-        if (!proyecto) throw new Error("Proyecto no encontrado");
-
-        // Validar que el usuario sea miembro del equipo
-        const idea = proyecto.Idea;
-        const equipo = await Equipo.findOne({
+        const integrante = await IntegrantesEquipo.findOne({
             where: {
-                codigo_materia: idea.codigo_materia,
-                nombre: idea.nombre,
-                periodo: idea.periodo,
-                anio: idea.anio
+                id_equipo: entregable.id_equipo,
+                codigo_usuario
             },
-            include: [{
-                model: IntegrantesEquipo,
-                as: 'Integrante_Equipos',
-                where: { codigo_usuario }
-            }]
+            transaction
         });
 
-        if (!equipo) {
-            throw new Error("No eres miembro del equipo de este proyecto");
+        if (!integrante) {
+            throw new Error("No eres miembro de este equipo");
         }
 
-        // Validar que existan entregables para esta actividad
-        const entregables = await Entregable.findAll({
-            where: {
-                id_proyecto,
-                id_actividad
-            }
-        });
-
-        if (entregables.length === 0) {
-            throw new Error("No puedes enviar el proyecto a revisión sin haber subido entregables");
+        // ✅ AQUÍ ESTÁ EL FIX: Verificar que Actividad existe
+        const actividad = entregable.id_actividad ? await Actividad.findByPk(entregable.id_actividad, { transaction }) : null;
+        console.log(actividad)
+        if (!actividad) {
+            throw new Error("Actividad no encontrada para este entregable");
         }
+        
+        // Solo validar fecha de cierre si existe
+        if (actividad.fecha_cierre) {
+            const hoy = new Date();
+            const fechaCierre = new Date(actividad.fecha_cierre);
 
-        // Validar tipo de alcance y entregables requeridos
-        const actividad = await Actividad.findByPk(id_actividad, {
-            include: [{
-                model: TipoAlcance,
-                as: 'Tipo_alcance'
-            }]
-        });
-
-        const tipoAlcance = actividad.Tipo_alcance.nombre.toUpperCase();
-
-        if (tipoAlcance === 'Investigativo') {
-            // Debe tener al menos un documento
-            const tieneDocumento = entregables.some(e => e.tipo === 'DOCUMENTO');
-            if (!tieneDocumento) {
-                throw new Error("Para enviar a revisión un proyecto Investigativo debe tener al menos un documento");
-            }
-        } else if (tipoAlcance === 'Desarrollo') {
-            // Validar que estén todos los ítems requeridos
-            const itemsRequeridos = await obtenerItemsRequeridos(id_actividad);
-            const tiposSubidos = entregables.map(e => e.tipo);
-
-            const itemsFaltantes = itemsRequeridos.filter(
-                item => !tiposSubidos.includes(item)
-            );
-
-            if (itemsFaltantes.length > 0) {
-                throw new Error(
-                    `Faltan los siguientes tipos de entregables: ${itemsFaltantes.join(', ')}`
-                );
+            if (hoy > fechaCierre) {
+                throw new Error("La actividad ya cerró. No se pueden actualizar entregables");
             }
         }
 
-        // Cambiar estado del proyecto a REVISION
+        const { tipo, ...datosProcesamiento } = datosEntregable;
+
+        const { url_archivo, nombre_archivo } = await procesarArchivo(
+            tipo.toUpperCase(),
+            { ...datosProcesamiento, id_entregable }
+        );
+
+        entregable.url_archivo = url_archivo;
+        entregable.nombre_archivo = nombre_archivo;
+        entregable.fecha_subida = new Date();
+        await entregable.save({ transaction });
+
         const estadoRevision = await Estado.findOne({
-            where: { descripcion: 'REVISION' }
+            where: { descripcion: 'REVISION' },
+            transaction
         });
 
-        // Registrar en historial del proyecto
-        await HistorialProyecto.create({
-            id_proyecto,
+        await HistorialEntregable.create({
+            id_entregable,
             id_estado: estadoRevision.id_estado,
             codigo_usuario,
-            observacion: `Proyecto enviado a revisión para la actividad "${actividad.titulo}". Total de entregables: ${entregables.length}`
+            observacion: `Entregable de tipo ${tipo} actualizado por ${codigo_usuario}`
         }, { transaction });
 
         await transaction.commit();
 
-        return {
-            mensaje: "Proyecto enviado a revisión exitosamente",
-            total_entregables: entregables.length,
-            actividad: actividad.titulo
-        };
+        const entregableCompleto = await Entregable.findByPk(id_entregable, {
+            include: [
+                { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
+                { model: Equipo, attributes: ['id_equipo', 'descripcion'] },
+                { model: Actividad, attributes: ['id_actividad', 'titulo'] },
+                { model: Estado, attributes: ['descripcion'] }
+            ]
+        });
+
+        // Formatear fecha para el frontend
+        if (entregableCompleto.fecha_subida) {
+            entregableCompleto.fecha_subida_formateada = new Date(entregableCompleto.fecha_subida).toLocaleDateString('es-CO', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        return entregableCompleto;
 
     } catch (error) {
-        if (!transaction.finished) {
-            await transaction.rollback();
-        }
+        if (!transaction.finished) await transaction.rollback();
         throw error;
     }
 }
 
-async function actualizarEntregable(id_entregable, datosEntregable, codigo_usuario) {
+async function enviarProyectoARevision(id_proyecto, codigo_usuario) {
   const transaction = await db.transaction();
 
   try {
-    if (!id_entregable) throw new Error("ID de entregable requerido");
-    if (!codigo_usuario) throw new Error("Código de usuario requerido");
+    if (!id_proyecto) throw new Error("ID de proyecto requerido.");
 
-    // Obtener entregable existente
-    const entregable = await Entregable.findByPk(id_entregable, {
-      include: [
-        { model: Proyecto },
-        { model: Actividad }
-      ],
+    // Buscar proyecto + idea asociada
+    const proyecto = await Proyecto.findByPk(id_proyecto, {
+      include: [{ model: Idea, as: 'Idea' }],
       transaction
     });
 
-    if (!entregable) throw new Error("Entregable no encontrado");
+    if (!proyecto) throw new Error("Proyecto no encontrado.");
+    if (!proyecto.Idea) throw new Error("No se encontró la idea asociada al proyecto.");
 
-    // Verificar que es miembro del equipo
-    const integrante = await IntegrantesEquipo.findOne({
-      where: {
-        id_equipo: entregable.id_equipo,
-        codigo_usuario
-      },
-      transaction
-    });
-
-    if (!integrante) {
-      throw new Error("No eres miembro de este equipo");
-    }
-
-    // Validar que la actividad no haya cerrado
-    const actividad = entregable.Actividad;
-    const hoy = new Date();
-    const fechaCierre = new Date(actividad.fecha_cierre);
-
-    if (hoy > fechaCierre) {
-      throw new Error("La actividad ya cerró. No se pueden actualizar entregables");
-    }
-
-    const { tipo, ...datosProcesamiento } = datosEntregable;
-
-    // Procesar nuevo archivo/URL
-    const { url_archivo, nombre_archivo } = await procesarArchivo(
-      tipo.toUpperCase(),
-      { ...datosProcesamiento, id_entregable }
-    );
-
-    // Actualizar entregable
-    entregable.url_archivo = url_archivo;
-    entregable.nombre_archivo = nombre_archivo;
-    await entregable.save({ transaction });
-
-    // Registrar en historial
+    // Buscar estado 'REVISION'
     const estadoRevision = await Estado.findOne({
       where: { descripcion: 'REVISION' },
       transaction
     });
+    if (!estadoRevision) throw new Error("Estado 'REVISION' no encontrado en la base de datos.");
 
-    await HistorialEntregable.create({
-      id_entregable,
+    // Cambiar solo el estado de la IDEA a REVISION
+    proyecto.Idea.id_estado = estadoRevision.id_estado;
+    await proyecto.Idea.save({ transaction });
+
+    // Validar si el usuario existe (para no violar FK al insertar historial)
+    let usuarioValido = null;
+    if (codigo_usuario) {
+      const Usuario = (await import("../models/Usuario.js")).default; // evita ciclo si no está importado arriba
+      usuarioValido = await Usuario.findOne({ where: { codigo: codigo_usuario }, transaction });
+    }
+
+    // Registrar historial del proyecto (usar codigo_usuario solo si existe)
+    await HistorialProyecto.create({
+      fecha: new Date(),
+      observacion: `Idea (id: ${proyecto.Idea.id_idea}) enviada a revisión.`,
       id_estado: estadoRevision.id_estado,
-      codigo_usuario,
-      observacion: `Entregable de tipo ${tipo} actualizado por ${codigo_usuario}`
+      id_proyecto,
+      codigo_usuario: usuarioValido ? codigo_usuario : null
     }, { transaction });
 
     await transaction.commit();
 
-    // Retornar con datos actualizados
-    return await Entregable.findByPk(id_entregable, {
-      include: [
-        { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
-        { model: Equipo, attributes: ['id_equipo', 'descripcion'] },
-        { model: Actividad, attributes: ['id_actividad', 'titulo'] },
-        { model: Estado, attributes: ['descripcion'] }
-      ]
-    });
-
+    return {
+      mensaje: "Idea enviada a revisión correctamente.",
+      id_proyecto,
+      id_idea: proyecto.Idea.id_idea,
+      nuevo_estado: "REVISION"
+    };
   } catch (error) {
     if (!transaction.finished) await transaction.rollback();
     throw error;
   }
 }
+
+
+
+
 
 async function retroalimentarEntregable(id_entregable, comentarios, calificacion, codigo_usuario) {
     const transaction = await db.transaction();
@@ -563,8 +546,77 @@ async function retroalimentarEntregable(id_entregable, comentarios, calificacion
     }
 }
 
+async function deshabilitarEntregable(id_entregable, codigo_usuario) {
+    const transaction = await db.transaction();
+
+    try {
+        if (!id_entregable) throw new Error("ID de entregable requerido");
+        if (!codigo_usuario) throw new Error("Código de usuario requerido");
+
+        const entregable = await Entregable.findByPk(id_entregable, {
+            include: [{ model: Estado }],
+            transaction
+        });
+
+        if (!entregable) throw new Error("Entregable no encontrado");
+
+        const estadoInhabilitado = await Estado.findOne({
+            where: { descripcion: 'INHABILITADO' },
+            transaction
+        });
+
+        if (!estadoInhabilitado) {
+            throw new Error("No se encontró el estado INHABILITADO");
+        }
+
+        // Actualizar estado del entregable
+        entregable.id_estado = estadoInhabilitado.id_estado;
+        await entregable.save({ transaction });
+
+        // Registrar historial
+        await HistorialEntregable.create({
+            id_entregable,
+            id_estado: estadoInhabilitado.id_estado,
+            codigo_usuario,
+            observacion: `El entregable fue deshabilitado por ${codigo_usuario}`
+        }, { transaction });
+
+        await transaction.commit();
+
+        return {
+            mensaje: "Entregable deshabilitado exitosamente",
+            id_entregable,
+            nuevo_estado: "INHABILITADO"
+        };
+
+    } catch (error) {
+        if (!transaction.finished) await transaction.rollback();
+        throw error;
+    }
+}
+
+async function obtenerUltimoHistorialEntregable(id_entregable) {
+  try {
+    const ultimoHistorial = await HistorialEntregable.findOne({
+      where: { id_entregable },
+      include: [
+        { model: Estado, attributes: ['id_estado', 'descripcion'] },
+        { model: Usuario, attributes: ['codigo_usuario', 'nombre', 'apellido'] }
+      ],
+      order: [['fecha', 'DESC']],
+    });
+
+    return ultimoHistorial || null;
+  } catch (error) {
+    console.error("Error al obtener el último historial del entregable:", error);
+    throw error;
+  }
+}
+
+
 export default {
     obtenerEntregablesPorProyectoYActividad,
+    deshabilitarEntregable,
     obtenerEntregablePorId,
     validarEquipoTieneProyecto,
     actualizarEntregable,
