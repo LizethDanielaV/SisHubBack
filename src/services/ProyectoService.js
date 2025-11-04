@@ -13,7 +13,6 @@ import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import db from "../db/db.js";
 import Grupo from "../models/Grupo.js";
 import Materia from "../models/Materia.js";
-import ActividadItem from "../models/ActividadItem.js";
 import { Op } from 'sequelize';
 import Item from "../models/Item.js";
 import MensajeService from "./MensajeService.js";
@@ -470,38 +469,14 @@ async function listarProyectosDirector() {
                 attributes: ['nombre']
             }, {
                 model: Idea,
-                attributes: ['objetivo_general', 'titulo' ]
-            },{
-                model: Estado, 
+                attributes: ['objetivo_general', 'titulo']
+            }, {
+                model: Estado,
                 attributes: ['descripcion']
-                }
+            }
             ],
         });
-        // Calcular porcentajes en paralelo para mejor rendimiento
-        const porcentajesPromises = proyectos.map(p => 
-            calcularAvanceProyecto(p.id_proyecto).catch(error => {
-                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
-                return 0; // Retornar 0 si hay error
-            })
-        );
-
-        const porcentajes = await Promise.all(porcentajesPromises);
-        
-        // Construir el resultado con los porcentajes
-        const resultado = proyectos.map((p, index) => ({
-            id_proyecto: p.id_proyecto,
-            linea_investigacion: p.linea_investigacion,
-            tecnologias: p.tecnologias,
-            palabras_clave: p.palabras_clave,
-            fecha_creacion: p.fecha_creacion,
-            porcentaje: porcentajes[index],
-            TipoAlcance: p.Tipo_alcance,
-            Idea: p.Idea,
-            Estado: p.Estado
-        }));
-        
-        return resultado;
-       // return proyectos;
+        return proyectos;
     } catch (error) {
         throw new Error("Error al obtener los proyectos " + error.message);
     }
@@ -521,7 +496,7 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                     attributes: ['titulo', 'objetivo_general']
                 },
                 {
-                    model: Estado, 
+                    model: Estado,
                     attributes: ['descripcion']
                 },
                 {
@@ -580,31 +555,7 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                 }
             ]
         });
-
-        // Calcular porcentajes en paralelo para mejor rendimiento
-        const porcentajesPromises = proyectos.map(p => 
-            calcularAvanceProyecto(p.id_proyecto).catch(error => {
-                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
-                return 0; // Retornar 0 si hay error
-            })
-        );
-        
-        const porcentajes = await Promise.all(porcentajesPromises);
-        
-        // Construir el resultado con los porcentajes SIN entregables
-        const resultado = proyectos.map((p, index) => {
-            const proyectoJSON = p.toJSON();
-            // Eliminar el array de entregables
-            delete proyectoJSON.entregables;
-            
-            return {
-                ...proyectoJSON,
-                porcentaje: porcentajes[index]
-            };
-        });
-        
-        return resultado;
-       // return proyectos;
+        return proyectos;
     } catch (error) {
         throw new Error("Error al obtener los proyectos: " + error.message);
     }
@@ -620,7 +571,7 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                     attributes: ['nombre']
                 },
                 {
-                    model: Estado, 
+                    model: Estado,
                     attributes: ['descripcion']
                 },
                 {
@@ -670,18 +621,7 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 }
             ]
         });
-        // Calcular porcentajes en paralelo para mejor rendimiento
-        const porcentajesPromises = proyectos.map(p => 
-            calcularAvanceProyecto(p.id_proyecto).catch(error => {
-                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
-                return 0; // Retornar 0 si hay error
-            })
-        );
-        
-        const porcentajes = await Promise.all(porcentajesPromises);
-        
-        // Mapear resultado con porcentaje
-        const resultado = proyectos.map((proyecto, index) => {
+        const resultado = proyectos.map(proyecto => {
             // obtener materias asociadas (sin duplicados)
             const materias = [];
 
@@ -697,14 +637,11 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 linea_investigacion: proyecto.linea_investigacion,
                 tecnologias: proyecto.tecnologias,
                 fecha_creacion: proyecto.fecha_creacion,
-                porcentaje: porcentajes[index], 
-                Tipo_alcance: proyecto.Tipo_alcance,
-                Estado: proyecto.Estado,
+                Tipo_alcance: proyecto.TipoAlcance,
                 Idea: proyecto.Idea,
                 materias: materias
             };
         });
-        
         return resultado;
     } catch (error) {
         throw new Error("Error al obtener los proyectos: " + error.message);
@@ -713,79 +650,91 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
 
 async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, anio) {
     try {
+        // 🔹 Buscar los proyectos asociados al grupo
         const proyectos = await Proyecto.findAll({
-            attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'fecha_creacion'],
+            attributes: [
+                "id_proyecto",
+                "linea_investigacion",
+                "tecnologias",
+                "fecha_creacion"
+            ],
             include: [
                 {
                     model: TipoAlcance,
-                    attributes: ['nombre']
+                    attributes: ["nombre"]
                 },
                 {
-                    model: Estado, 
-                    attributes: ['descripcion']
+                    model: Estado,
+                    attributes: ["descripcion"],
+                    as: "Estado"
                 },
                 {
                     model: Idea,
-                    attributes: ['titulo', 'objetivo_general']
-                },
-                {
-                    model: Entregable,
-                    attributes: ['id_entregable'],
+                    attributes: [
+                        "titulo",
+                        "objetivo_general",
+                        "codigo_materia",
+                        "nombre",
+                        "periodo",
+                        "anio"
+                    ],
+                    where: {
+                        codigo_materia: codigoMateria,
+                        nombre,
+                        periodo,
+                        anio
+                    },
                     include: [
                         {
-                            model: Actividad,
-                            attributes: ['id_actividad'],
-                            include: [
-                                {
-                                    model: Grupo,
-                                    attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
-                                    on: {
-                                        '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.codigo_materia') },
-                                        '$entregables.actividad.nombre$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.nombre') },
-                                        '$entregables.actividad.periodo$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.periodo') },
-                                        '$entregables.actividad.anio$': { [db.Sequelize.Op.eq]: db.Sequelize.col('entregables->actividad->Grupo.anio') }
-                                    },
-                                    where: {
-                                        codigo_materia: codigoMateria,
-                                        nombre: nombre,
-                                        periodo: periodo,
-                                        anio: anio
-                                    },
-                                    required: true
-                                }
-                            ]
+                            model: Estado,
+                            as: "Estado",
+                            attributes: ["descripcion"]
                         }
-                    ]
+                    ],
+                    required: true
                 }
             ]
         });
-        // Calcular porcentajes en paralelo para mejor rendimiento
-        const porcentajesPromises = proyectos.map(p => 
-            calcularAvanceProyecto(p.id_proyecto).catch(error => {
-                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
-                return 0; // Retornar 0 si hay error
-            })
-        );
-        
-        const porcentajes = await Promise.all(porcentajesPromises);
-        
-        // Mapear resultado con porcentaje
-        const resultado = proyectos.map((p, index) => ({
+
+        // 🔹 Buscar la actividad del grupo junto con su tipo de alcance
+        const actividad = await Actividad.findOne({
+            where: { codigo_materia: codigoMateria, nombre, periodo, anio },
+            attributes: ["id_actividad"],
+            include: [
+                {
+                    model: TipoAlcance,
+                    attributes: ["nombre"]
+                }
+            ]
+        });
+
+        // 🔹 Formato de salida
+        const resultado = proyectos.map((p) => ({
             id_proyecto: p.id_proyecto,
             linea_investigacion: p.linea_investigacion,
             tecnologias: p.tecnologias,
             fecha_creacion: p.fecha_creacion,
-            porcentaje: porcentajes[index], 
-            Tipo_alcance: p.Tipo_alcance,
-            Estado: p.Estado,
-            Idea: p.Idea
+            estado: p.Estado?.descripcion || null, // Estado del proyecto
+            id_actividad: actividad?.id_actividad || null, // 👈 id_actividad del grupo
+            tipo_alcance: actividad?.Tipo_alcance?.nombre || null, // 👈 nombre del tipo de alcance
+            Idea: {
+                titulo: p.Idea?.titulo,
+                objetivo_general: p.Idea?.objetivo_general,
+                codigo_materia: p.Idea?.codigo_materia,
+                nombre: p.Idea?.nombre,
+                periodo: p.Idea?.periodo,
+                anio: p.Idea?.anio,
+                estado: p.Idea?.Estado?.descripcion || null // Estado de la idea
+            }
         }));
-        
+
         return resultado;
     } catch (error) {
+        console.error("Error al obtener los proyectos filtrados por grupo:", error);
         throw new Error("Error al obtener los proyectos: " + error.message);
     }
 }
+
 
 async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
     const transaction = await db.transaction();
@@ -806,12 +755,19 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
         });
         if (!estadoCalificado) throw new Error("No existe el estado 'CALIFICADO' en la tabla Estado.");
 
+        // Buscar estado "APROBADO"
+        const estadoAprobado = await Estado.findOne({
+            where: { descripcion: "APROBADO" },
+            transaction
+        });
+        if (!estadoCalificado) throw new Error("No existe el estado 'CALIFICADO' en la tabla Estado.");
+
         // Actualizar estado del proyecto e idea
         proyecto.id_estado = estadoCalificado.id_estado;
         await proyecto.save({ transaction });
 
         if (proyecto.Idea) {
-            proyecto.Idea.id_estado = estadoCalificado.id_estado;
+            proyecto.Idea.id_estado = estadoAprobado.id_estado;
             await proyecto.Idea.save({ transaction });
         }
 
@@ -877,9 +833,13 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
         if (!accionesValidas.includes(accion)) throw new Error("Acción no válida.");
 
         const proyecto = await Proyecto.findByPk(id_proyecto, {
-            include: [{ model: Idea }],
+            include: [
+                { model: Idea },
+                { model: Estado }
+            ],
             transaction,
         });
+
         if (!proyecto) throw new Error("Proyecto no encontrado.");
 
         let nuevoEstadoProyecto = null;
@@ -934,7 +894,8 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
                 break;
 
             case "Aprobar_Con_Observacion":
-                nuevoEstadoProyecto = proyecto.id_estado; // se mantiene igual
+                // proyecto.Estado ahora existe
+                nuevoEstadoProyecto = proyecto.Estado; // objeto completo Estado
                 nuevoEstadoIdea = estadoStandBy;
                 mensaje = "Proyecto aprobado con observaciones.";
                 break;
@@ -942,7 +903,7 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
             case "Rechazar":
                 nuevoEstadoProyecto = estadoCalificado;
 
-                if (proyecto.id_estado === estadoCalificado.id_estado) {
+                if (proyecto.Estado?.descripcion === estadoCalificado.descripcion) {
                     nuevoEstadoIdea = estadoAprobada;
                 } else {
                     nuevoEstadoIdea = estadoLibre;
@@ -1101,70 +1062,144 @@ async function liberarProyecto(idProyecto, codigo_usuario) {
 }
 
 async function listarPropuestasLibres() {
-  try {
-    const estadoLibre = await Estado.findOne({
-      where: { descripcion: "LIBRE" },
-      attributes: ["id_estado"],
-    });
+    try {
+        const estadoLibre = await Estado.findOne({
+            where: { descripcion: "LIBRE" },
+            attributes: ["id_estado"],
+        });
 
-    if (!estadoLibre) {
-      throw new Error("No se encontró el estado 'LIBRE'");
+        if (!estadoLibre) {
+            throw new Error("No se encontró el estado 'LIBRE'");
+        }
+
+        const estadoCalificado = await Estado.findOne({
+            where: { descripcion: "CALIFICADO" },
+            attributes: ["id_estado"],
+        });
+
+        if (!estadoCalificado) {
+            throw new Error("No se encontró el estado 'CALIFICADO'");
+        }
+
+        const propuestasLibres = await Idea.findAll({
+            where: { id_estado: estadoLibre.id_estado },
+            attributes: [
+                "id_idea",
+                "titulo",
+                "problema",
+                "justificacion",
+                "objetivo_general",
+                "objetivos_especificos",
+                "codigo_materia",
+                "nombre",
+                "periodo",
+                "anio",
+            ],
+            include: [
+                {
+                    model: Estado,
+                    attributes: ["descripcion"],
+                },
+                {
+                    model: Proyecto,
+                    as: "proyectos",
+                    attributes: ["id_proyecto", "id_estado"],
+                    required: true,
+                    include: [
+                        {
+                            model: Estado,
+                            attributes: ["descripcion"],
+                            where: { descripcion: "CALIFICADO" },
+                        },
+                    ],
+                },
+            ],
+            order: [["id_idea", "DESC"]],
+        });
+
+        return propuestasLibres;
+    } catch (error) {
+        console.error("Error al listar propuestas LIBRES:", error);
+        throw new Error(
+            "No fue posible listar las propuestas con estado LIBRE y proyecto CALIFICADO"
+        );
     }
-
-    const estadoCalificado = await Estado.findOne({
-      where: { descripcion: "CALIFICADO" },
-      attributes: ["id_estado"],
-    });
-
-    if (!estadoCalificado) {
-      throw new Error("No se encontró el estado 'CALIFICADO'");
-    }
-
-    const propuestasLibres = await Idea.findAll({
-      where: { id_estado: estadoLibre.id_estado },
-      attributes: [
-        "id_idea",
-        "titulo",
-        "problema",
-        "justificacion",
-        "objetivo_general",
-        "objetivos_especificos",
-        "codigo_materia",
-        "nombre",
-        "periodo",
-        "anio",
-      ],
-      include: [
-        {
-          model: Estado,
-          attributes: ["descripcion"],
-        },
-        {
-          model: Proyecto,
-          as: "proyectos",
-          attributes: ["id_proyecto", "id_estado"],
-          required: true,
-          include: [
-            {
-              model: Estado,
-              attributes: ["descripcion"],
-              where: { descripcion: "CALIFICADO" }, 
-            },
-          ],
-        },
-      ],
-      order: [["id_idea", "DESC"]],
-    });
-
-    return propuestasLibres;
-  } catch (error) {
-    console.error("Error al listar propuestas LIBRES:", error);
-    throw new Error(
-      "No fue posible listar las propuestas con estado LIBRE y proyecto CALIFICADO"
-    );
-  }
 }
 
+export async function rechazarObservacion(id_idea, codigo_usuario) {
+    const transaction = await db.transaction();
+    try {
+        if (!codigo_usuario)
+            throw new Error("Debe especificar el código del usuario que realiza la revisión.");
+
+        const idea = await Idea.findByPk(id_idea, {
+            include: [{ model: Proyecto }],
+            transaction,
+        });
+        if (!idea) throw new Error("Idea no encontrada.");
+
+        if (!idea.Proyecto) throw new Error("No hay proyecto asociado a esta idea.");
+
+        const proyecto = idea.Proyecto;
+
+        // 🔹 Buscar estados necesarios
+        const estadoSeleccionado = await Estado.findOne({ where: { descripcion: "SELECCIONADO" }, transaction });
+        const estadoCalificado = await Estado.findOne({ where: { descripcion: "CALIFICADO" }, transaction });
+        const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction });
+        const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" }, transaction });
+        const estadoAprobado = await Estado.findOne({ where: { descripcion: "APROBADO" }, transaction });
+
+        if (!estadoSeleccionado || !estadoCalificado || !estadoStandBy || !estadoLibre || !estadoAprobado)
+            throw new Error("No se encontraron los estados requeridos.");
+
+        let nuevoEstadoProyecto = proyecto.id_estado;
+        let nuevoEstadoIdea = idea.id_estado;
+        let mensaje = "";
+
+        // 🔁 Lógica de cambio de estados
+        if (proyecto.id_estado === estadoSeleccionado.id_estado) {
+            nuevoEstadoProyecto = estadoCalificado;
+            if (idea.id_estado === estadoStandBy.id_estado) {
+                nuevoEstadoIdea = estadoLibre;
+            }
+            mensaje = "Proyecto rechazado. Pasó de SELECCIONADO a CALIFICADO. La idea quedó LIBRE.";
+        }
+        else if (proyecto.id_estado === estadoCalificado.id_estado) {
+            nuevoEstadoProyecto = estadoCalificado; // se mantiene
+            if (idea.id_estado === estadoStandBy.id_estado) {
+                nuevoEstadoIdea = estadoAprobado;
+            }
+            mensaje = "Proyecto rechazado (mantiene estado CALIFICADO). La idea pasó a APROBADO.";
+        }
+        else {
+            mensaje = "El proyecto no se encontraba en un estado válido para rechazo.";
+        }
+
+        // 🔹 Guardar cambios
+        proyecto.id_estado = nuevoEstadoProyecto.id_estado;
+        await proyecto.save({ transaction });
+
+        idea.id_estado = nuevoEstadoIdea.id_estado;
+        await idea.save({ transaction });
+
+        // 🔹 Registrar historial
+        await HistorialProyecto.create({
+            fecha: new Date(),
+            observacion:
+                "El estudiante decidió no corregir las observaciones del profesor para continuar el proyecto.",
+            id_estado: nuevoEstadoProyecto.id_estado,
+            id_proyecto: proyecto.id_proyecto,
+            codigo_usuario,
+        }, { transaction });
+
+        await transaction.commit();
+        return { message: mensaje, proyecto, idea };
+
+    } catch (error) {
+        await transaction.rollback();
+        throw new Error("Error al rechazar la observación: " + error.message);
+    }
+}
 
 async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
     const t = await db.transaction();
@@ -1260,7 +1295,7 @@ async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
     }
 }
 
-async function continuarProyecto(idProyecto, codigo_usuario) {
+async function continuarProyecto(idProyecto, codigo_usuario, nuevoGrupo) {
     const t = await db.transaction();
     try {
         const proyecto = await Proyecto.findByPk(idProyecto, {
@@ -1271,26 +1306,32 @@ async function continuarProyecto(idProyecto, codigo_usuario) {
         if (!proyecto) throw new Error("Proyecto no encontrado.");
         if (!proyecto.Idea) throw new Error("El proyecto no tiene idea asociada.");
 
-        // Verificar que el proyecto esté calificado
+        // Verificar que el proyecto esté CALIFICADO
         const estadoCalificado = await Estado.findOne({
             where: { descripcion: "CALIFICADO" },
             transaction: t
         });
         if (!estadoCalificado) throw new Error("No existe el estado CALIFICADO en la tabla Estado.");
-
         if (proyecto.id_estado !== estadoCalificado.id_estado) {
             throw new Error("Solo se pueden continuar proyectos con estado CALIFICADO.");
         }
 
-        // Cambiar la idea a REVISION
+        // Obtener estado REVISION
         const estadoRevision = await Estado.findOne({
             where: { descripcion: "REVISION" },
             transaction: t
         });
         if (!estadoRevision) throw new Error("No se encontró el estado REVISION.");
 
+        // Actualizar la idea: cambiar estado y asignar al nuevo grupo
         await proyecto.Idea.update(
-            { id_estado: estadoRevision.id_estado },
+            {
+                id_estado: estadoRevision.id_estado,
+                codigo_materia: nuevoGrupo.codigo_materia,
+                nombre: nuevoGrupo.nombre,
+                periodo: nuevoGrupo.periodo,
+                anio: nuevoGrupo.anio
+            },
             { transaction: t }
         );
 
@@ -1300,7 +1341,7 @@ async function continuarProyecto(idProyecto, codigo_usuario) {
                 id_proyecto: idProyecto,
                 id_estado: estadoRevision.id_estado,
                 codigo_usuario,
-                observacion: `El proyecto fue continuado por el usuario ${codigo_usuario}. La idea asociada pasó a estado REVISION.`,
+                observacion: `El proyecto fue continuado por el usuario ${codigo_usuario}. La idea asociada pasó a estado REVISION y se asignó al nuevo grupo.`,
                 fecha: new Date()
             },
             { transaction: t }
@@ -1309,7 +1350,7 @@ async function continuarProyecto(idProyecto, codigo_usuario) {
         await t.commit();
 
         return {
-            message: "Proyecto continuado correctamente. La idea pasó a estado STAND_BY.",
+            message: "Proyecto continuado correctamente. La idea pasó a estado REVISION y se asignó al nuevo grupo.",
             proyecto
         };
     } catch (error) {
@@ -1317,6 +1358,7 @@ async function continuarProyecto(idProyecto, codigo_usuario) {
         throw new Error("Error al continuar proyecto: " + error.message);
     }
 }
+
 
 async function obtenerProyectosContinuables(codigo_usuario) {
     try {
@@ -1341,7 +1383,7 @@ async function obtenerProyectosContinuables(codigo_usuario) {
                         id_estado: estadoAprobado.id_estado,
                         codigo_usuario
                     },
-                    attributes: ["id_idea", "titulo", "id_estado"]
+                    attributes: ["id_idea", "titulo", "id_estado", "problema", "justificacion", "objetivo_general", "objetivos_especificos"]
                 }
             ],
             attributes: [
@@ -1360,70 +1402,67 @@ async function obtenerProyectosContinuables(codigo_usuario) {
     }
 }
 
-async function verDetalleProyecto(idProyecto){
-   
-  if (!idProyecto || isNaN(idProyecto)) {
-    throw new Error("El id no es válido");
-  }
-  try {
-    const proyectoBuscado = await Proyecto.findOne({
-        where: { id_proyecto: idProyecto },
-        attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'palabras_clave', 'fecha_creacion'],
-        include: [{
-            model: HistorialProyecto, 
-            attributes: ['id_historial_proyecto', 'fecha'], 
+async function verDetalleProyecto(idProyecto) {
+
+    if (!idProyecto || isNaN(idProyecto)) {
+        throw new Error("El id no es válido");
+    }
+    try {
+        const proyectoBuscado = await Proyecto.findOne({
+            where: { id_proyecto: idProyecto },
+            attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'palabras_clave', 'fecha_creacion'],
             include: [{
-                model: Estado,
-                attributes: ['descripcion']
-            }, {
-                model: Equipo, 
-                attributes: ['id_equipo'],
+                model: HistorialProyecto,
+                attributes: ['id_historial_proyecto', 'fecha'],
                 include: [{
-                    model: IntegrantesEquipo, 
-                    attributes: ['rol_equipo'], 
+                    model: Estado,
+                    attributes: ['descripcion']
+                }, {
+                    model: Equipo,
+                    attributes: ['id_equipo'],
                     include: [{
-                        model: Usuario, 
-                        attributes: ['nombre', 'codigo']
+                        model: IntegrantesEquipo,
+                        attributes: ['rol_equipo'],
+                        include: [{
+                            model: Usuario,
+                            attributes: ['nombre', 'codigo']
+                        }]
                     }]
                 }]
-            }]
 
-        }, 
-        {
-            model: TipoAlcance,
-            attributes: ['nombre']
             },
             {
-            model: Idea,
-            attributes: ['titulo', 'objetivo_general']
-        }, {
-            model: Entregable, 
-            attributes: ['tipo', 'nombre_archivo', 'url_archivo', 'fecha_subida'], 
-            include: [{
-                model: Estado, 
-                attributes: ['descripcion']
-            }]
-        }, {
-            model: Idea, 
-            attributes: ['titulo', 'problema', 'justificacion', 'objetivo_general', 'objetivos_especificos']
+                model: TipoAlcance,
+                attributes: ['nombre']
+            },
+            {
+                model: Idea,
+                attributes: ['titulo', 'problema', 'justificacion', 'objetivo_general', 'objetivos_especificos']
+            }, {
+                model: Entregable,
+                attributes: ['tipo', 'nombre_archivo', 'url_archivo', 'fecha_subida'],
+                include: [{
+                    model: Estado,
+                    attributes: ['descripcion']
+                }]
+            }
+            ]
+        });
+        if (!proyectoBuscado) {
+            throw new Error("Proyecto no encontrado");
         }
-        ]
-    });
-    if (!proyectoBuscado) {
-      throw new Error("Proyecto no encontrado");
+        return proyectoBuscado;
+    } catch (error) {
+        throw new Error("Error al obtener la materia " + error.message);
     }
-    return proyectoBuscado;
-  } catch (error) {
-    throw new Error("Error al obtener la materia " + error.message);
-  }
-} 
+}
 
-async function generarHistorialProyecto(idProyecto){
-   
-      if (!idProyecto || isNaN(idProyecto)) {
+async function generarHistorialProyecto(idProyecto) {
+
+    if (!idProyecto || isNaN(idProyecto)) {
         throw new Error("El id no es válido");
-      }
-      try {
+    }
+    try {
         const proyectoBuscado = await Proyecto.findOne({
             where: { id_proyecto: idProyecto },
             attributes: ['id_proyecto', 'linea_investigacion', 'tecnologias', 'palabras_clave', 'fecha_creacion'],
@@ -1435,113 +1474,73 @@ async function generarHistorialProyecto(idProyecto){
                 {
                     model: Idea,
                     attributes: ['titulo', 'objetivo_general']
-                },{
-                    model: HistorialProyecto, 
-                    attributes: ['id_historial_proyecto', 'fecha'], 
+                }, {
+                    model: HistorialProyecto,
+                    attributes: ['id_historial_proyecto', 'fecha'],
                     include: [{
                         model: Estado,
                         attributes: ['descripcion']
                     }]
-                    
+
                 }, {
-                    model: Entregable, 
-                    attributes: ['id_entregable','nombre_archivo', 'fecha_subida'], 
+                    model: Entregable,
+                    attributes: ['id_entregable', 'nombre_archivo', 'fecha_subida'],
                     include: [{
-                        model: Actividad, 
+                        model: Actividad,
                         attributes: ['titulo']
                     }]
                 }
             ]
         });
-    
+
         if (!proyectoBuscado) {
-          throw new Error("Proyecto no encontrado");
+            throw new Error("Proyecto no encontrado");
         }
         return proyectoBuscado;
-      } catch (error) {
+    } catch (error) {
         throw new Error("Error al obtener la materia " + error.message);
-      }
+    }
 }
 
 async function calcularAvanceProyecto(idProyecto) {
     if (!idProyecto || isNaN(idProyecto)) {
         throw new Error("El id no es válido");
-      }
+    }
     try {
-        let porcentaje = 0;
         const proyecto = await Proyecto.findOne({
             where: { id_proyecto: idProyecto },
-            attributes: ['id_tipo_alcance']
-        });
-
-        // Obtener el id_actividad de la última actividad de un proyecto
-        const ultimoEntregable = await Entregable.findOne({
-            where: {
-                id_proyecto: idProyecto
-            },
-            order: [['fecha_subida', 'DESC']],
-            attributes: ['id_actividad', 'fecha_subida']
-        });
-        //console.log(ultimoEntregable.id_actividad);
-
-        //traigo todos los entregables de esa actividad y ese proyecto
-        const entregables = await Entregable.findAll({
-            where: {
-                id_proyecto: idProyecto, 
-                id_actividad: ultimoEntregable.id_actividad
-            }, 
-            attributes: ['tipo']
-        });
-
-        if(proyecto.id_tipo_alcance==1){
-            const tipos = entregables.map(e => e.tipo.toUpperCase());
-            const tieneDocumento = tipos.includes("DOCUMENTO");
-            if(tieneDocumento){
-                porcentaje=100;
-            }
-        }else if(proyecto.id_tipo_alcance == 2){
-            //traigo todos los items de esa actividad
-            const items = await ActividadItem.findAll({
-            where: {
-                id_actividad: ultimoEntregable.id_actividad
-            }, 
+            attributes: ['id_tipo_alcance'],
             include: [{
-                model: Item, 
-                attributes: ['nombre']
+                model: Entregable,
+                attributes: ['tipo']
             }]
-            });
-            porcentaje = calcularPorcentajeEntregables(items, entregables);
+        });
+        let porcentaje = 0;
+        if (proyecto.id_tipo_alcance == 2) {
+            const tipos = proyecto.entregables.map(e => e.tipo.toUpperCase());
+            const tieneRepositorio = tipos.includes("REPOSITORIO");
+            const tieneVideo = tipos.includes("VIDEO");
+
+            if (tieneRepositorio && tieneVideo) {
+                porcentaje = 100;
+            } else if (tieneRepositorio || tieneVideo) {
+                porcentaje = 50;
+            } else {
+                porcentaje = 0;
+            };
+
+        } else if (proyecto.id_tipo_alcance == 1) {
+            const tipos = proyecto.entregables.map(e => e.tipo.toUpperCase());
+            const tieneDocumento = tipos.includes("DOCUMENTO");
+            if (tieneDocumento) {
+                porcentaje = 100
+            }
         }
         return porcentaje;
     } catch (error) {
         throw new Error("Error al obtener el proyecto " + error.message);
     }
 }
-
-// Función para calcular el porcentaje de completitud
-function calcularPorcentajeEntregables(items, entregables) {
-  // Si no hay items requeridos, el porcentaje es 100%
-  if (!items || items.length === 0) {
-    return 100;
-  }
-
-  // Extraer los tipos únicos de items requeridos
-  const itemsRequeridos = [...new Set(items.map(item => item.Item.nombre))];
-  
-  // Extraer los tipos únicos de entregables enviados
-  const tiposEntregados = [...new Set(entregables.map(e => e.tipo))];
-  
-  // Contar cuántos items requeridos fueron cumplidos
-  const itemsCumplidos = itemsRequeridos.filter(itemRequerido => 
-    tiposEntregados.includes(itemRequerido)
-  );
-  
-  // Calcular porcentaje
-  const porcentaje = (itemsCumplidos.length / itemsRequeridos.length) * 100;
-  
-  return porcentaje;
-}
-
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
@@ -1556,9 +1555,9 @@ export default {
     listarProyectosDirector,
     listarTodosProyectosDeUnEstudiante,
     listarTodosProyectosDeUnProfesor,
-    listarTodosProyectosDeUnGrupo, 
-    verDetalleProyecto, 
+    listarTodosProyectosDeUnGrupo,
+    verDetalleProyecto,
     generarHistorialProyecto,
-    calcularAvanceProyecto
-
+    calcularAvanceProyecto,
+    rechazarObservacion
 };

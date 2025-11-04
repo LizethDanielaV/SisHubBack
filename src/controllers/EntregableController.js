@@ -196,17 +196,39 @@ async function crearEntregable(req, res) {
   }
 }
 
+async function deshabilitarEntregable(req, res) {
+    try {
+        const { id_entregable } = req.params;
+        const { codigo_usuario } = req.body;
+
+        const resultado = await EntregableService.deshabilitarEntregable(id_entregable, codigo_usuario);
+        res.json(resultado);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+const listarHistorialPorProyecto = async (req, res) => {
+  try {
+    const { id_proyecto } = req.params;
+    const historial = await EntregableService.obtenerHistorialProyecto(id_proyecto);
+    res.json(historial);
+  } catch (error) {
+    console.error("Error en controller historial:", error);
+    res.status(500).json({
+      message: "Error al obtener historial del proyecto",
+      error: error.message,
+    });
+  }
+};
+
 async function enviarProyectoARevision(req, res) {
   try {
     const { id_proyecto } = req.params;
-    const { id_actividad, codigo_usuario } = req.body;
+    const { codigo_usuario } = req.body;
 
     if (!id_proyecto) {
       return res.status(400).json({ error: "ID de proyecto requerido" });
-    }
-
-    if (!id_actividad) {
-      return res.status(400).json({ error: "ID de actividad requerido" });
     }
 
     if (!codigo_usuario) {
@@ -215,7 +237,6 @@ async function enviarProyectoARevision(req, res) {
 
     const resultado = await EntregableService.enviarProyectoARevision(
       parseInt(id_proyecto),
-      parseInt(id_actividad),
       codigo_usuario
     );
 
@@ -257,6 +278,24 @@ async function retroalimentarEntregable(req, res) {
   }
 }
 
+async function obtenerHistorialEntregable(req, res) {
+    const { id_entregable } = req.params;
+
+    try {
+        const historial = await EntregableService.obtenerHistorialEntregable(id_entregable);
+        return res.status(200).json({
+            success: true,
+            historial
+        });
+    } catch (error) {
+        console.error("Error en obtenerHistorialEntregable:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Error al obtener el historial del entregable"
+        });
+    }
+}
+
 async function obtenerTiposEntregable(req, res) {
   try {
     return res.status(200).json({
@@ -276,10 +315,13 @@ async function obtenerTiposEntregable(req, res) {
 
 export default {
   obtenerEntregablesPorProyectoYActividad, 
+  deshabilitarEntregable,
   actualizarEntregable,
   extraerTextoDocumento,
   crearEntregable,
+  obtenerHistorialEntregable,
   enviarProyectoARevision,
   retroalimentarEntregable,
-  obtenerTiposEntregable
+  obtenerTiposEntregable,
+  listarHistorialPorProyecto
 };

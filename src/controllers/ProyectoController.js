@@ -65,6 +65,26 @@ async function crearProyectoDesdeIdea(req, res) {
     }
 }
 
+async function rechazarObservacion(req, res) {
+    const { id_proyecto } = req.params;
+    const { codigo_usuario } = req.body;
+
+    try {
+      const result = await ProyectoService.rechazarObservacion(id_proyecto, codigo_usuario);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        idea: result.idea,
+      });
+    } catch (error) {
+      console.error("Error en revisar idea:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Error al revisar la idea",
+      });
+    }
+}
+
 async function obtenerProyecto(req, res) {
     try {
         const idProyecto = parseInt(req.params.id);
@@ -220,12 +240,13 @@ const calificarProyecto = async (req, res) => {
 
 const continuarProyecto = async (req, res) => {
   const { id_proyecto } = req.params;
-  const { codigo_usuario } = req.body;
+  const { codigo_usuario, grupo } = req.body;
 
   try {
     const resultado = await ProyectoService.continuarProyecto(
       id_proyecto,
-      codigo_usuario
+      codigo_usuario,
+      grupo
     );
     res.status(200).json(resultado);
   } catch (error) {
@@ -422,6 +443,7 @@ async function calcularAvanceProyecto(req, res) {
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
+    rechazarObservacion,
     /*listarProyectosPorGrupo,*/
     actualizarProyecto, 
     listarParaDirector, 
