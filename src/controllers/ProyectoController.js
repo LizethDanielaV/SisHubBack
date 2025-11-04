@@ -240,12 +240,13 @@ const calificarProyecto = async (req, res) => {
 
 const continuarProyecto = async (req, res) => {
   const { id_proyecto } = req.params;
-  const { codigo_usuario } = req.body;
+  const { codigo_usuario, grupo } = req.body;
 
   try {
     const resultado = await ProyectoService.continuarProyecto(
       id_proyecto,
-      codigo_usuario
+      codigo_usuario,
+      grupo
     );
     res.status(200).json(resultado);
   } catch (error) {

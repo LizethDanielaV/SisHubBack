@@ -10,9 +10,11 @@ import HistorialEntregable from "../models/HistorialEntregable.js";
 import ActividadItem from "../models/ActividadItem.js";
 import Item from "../models/Item.js";
 import TipoAlcance from "../models/TipoAlcance.js";
+import Usuario from "../models/Usuario.js";
 import IntegrantesEquipo from "../models/IntegrantesEquipo.js";
 import HistorialProyecto from "../models/HistorialProyecto.js";
 import db from "../db/db.js";
+import { Op } from "sequelize";
 import {
     subirArchivoAFirebase,
     clonarRepositorio,
@@ -37,7 +39,7 @@ async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad
                 id_actividad
             },
             include: [
-                { model: Estado, attributes: ['id_estado', 'descripcion'], where: { descripcion: 'REVISION' } },
+                { model: Estado, attributes: ['id_estado', 'descripcion'], where: { descripcion: 'CALIFICADO' } },
                 { model: Actividad, attributes: ['id_actividad', 'titulo'] },
                 { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
                 { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
@@ -494,10 +496,6 @@ async function enviarProyectoARevision(id_proyecto, codigo_usuario) {
   }
 }
 
-
-
-
-
 async function retroalimentarEntregable(id_entregable, comentarios, calificacion, codigo_usuario) {
     const transaction = await db.transaction();
 
@@ -613,9 +611,53 @@ async function obtenerUltimoHistorialEntregable(id_entregable) {
   }
 }
 
+export async function obtenerHistorialProyecto(id_proyecto) {
+  try {
+    const historial = await HistorialEntregable.findAll({
+      where: {
+        observacion: {
+          [Op.like]: "Entregable de tipo%", 
+        },
+      },
+      include: [
+        {
+          model: Entregable,
+          attributes: [
+            "id_entregable",
+            "tipo",
+            "nombre_archivo",
+            "url_archivo",
+            "comentarios",
+            "fecha_subida",
+            "calificacion",
+          ],
+          where: { id_proyecto },
+          include: [
+            {
+              model: Estado,
+              attributes: ["descripcion"],
+              where: { descripcion: "CALIFICADO" },
+            },
+          ],
+          required: true,
+        },
+      ],
+      order: [["fecha", "DESC"]],
+    });
+
+    return historial;
+  } catch (error) {
+    console.error("Error al obtener historial de entregables:", error);
+    throw new Error(
+      "Error al obtener historial de entregables: " + error.message
+    );
+  }
+}
+
 
 export default {
     obtenerEntregablesPorProyectoYActividad,
+    obtenerHistorialProyecto,
     deshabilitarEntregable,
     obtenerEntregablePorId,
     validarEquipoTieneProyecto,
