@@ -16,6 +16,8 @@ import Materia from "../models/Materia.js";
 import ActividadItem from "../models/ActividadItem.js";
 import { Op } from 'sequelize';
 import Item from "../models/Item.js";
+import MensajeService from "./MensajeService.js";
+import NotificacionService from "./NotificacionService.js";
 
 async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -823,9 +825,10 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
             },
             transaction
         });
-
+        console.log(equipo);
+        
         // Registrar en historial
-        await HistorialProyecto.create({
+        const historialProyecto = await HistorialProyecto.create({
             fecha: new Date(),
             observacion: observacion
                 ? `Proyecto calificado. Observaciones: ${observacion}`
@@ -836,7 +839,26 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
             id_equipo: equipo ? equipo.id_equipo : null
         }, { transaction });
 
-        await transaction.commit();
+
+        //generar notificacion a integrantes del equipo
+        const mensaje = await MensajeService.crearMensaje(`Calificacion de proyecto: ${proyecto.Idea.titulo}`, `Se ha registrado la calificacion de su proyecto con la siguiente observación: ${historialProyecto.observacion}`);
+        console.log("aquiiii" + equipo.id_equipo);
+        //obtener integrantes del equipo 
+        const integrantes = await IntegranteEquipo.findAll({
+            where: {id_equipo: equipo.id_equipo}, 
+            attributes: {codigo_usuario}
+        }); 
+         if (mensaje && mensaje.id_mensaje) {
+            await Promise.all(
+            integrantes.map(integrante => 
+                NotificacionService.crearNotificacion(
+                    integrante.codigo_usuario, mensaje.id_mensaje
+                )
+            )
+            );
+         }
+    
+         await transaction.commit();
 
         return { message: "Proyecto calificado exitosamente.", proyecto };
     } catch (error) {
