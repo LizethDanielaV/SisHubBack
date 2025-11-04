@@ -208,6 +208,20 @@ async function deshabilitarEntregable(req, res) {
     }
 }
 
+const listarHistorialPorProyecto = async (req, res) => {
+  try {
+    const { id_proyecto } = req.params;
+    const historial = await EntregableService.obtenerHistorialProyecto(id_proyecto);
+    res.json(historial);
+  } catch (error) {
+    console.error("Error en controller historial:", error);
+    res.status(500).json({
+      message: "Error al obtener historial del proyecto",
+      error: error.message,
+    });
+  }
+};
+
 async function enviarProyectoARevision(req, res) {
   try {
     const { id_proyecto } = req.params;
@@ -308,5 +322,6 @@ export default {
   obtenerHistorialEntregable,
   enviarProyectoARevision,
   retroalimentarEntregable,
-  obtenerTiposEntregable
+  obtenerTiposEntregable,
+  listarHistorialPorProyecto
 };

@@ -95,6 +95,7 @@ router.post(
 
 router.post("/proyecto/:id_proyecto/enviar-revision", EntregableController.enviarProyectoARevision);
 router.get("/:id_entregable/historial", EntregableController.obtenerHistorialEntregable);
+router.get("/historial/proyecto/:id_proyecto", EntregableController.listarHistorialPorProyecto);
 
 router.put(
   "/retroalimentar/:id_entregable",
