@@ -29,6 +29,31 @@ async function obtenerEntregablesPorProyectoYActividad(req, res) {
   }
 }
 
+async function obtenerEntregablesPorProyecto(req, res) {
+  try {
+    const { id_proyecto } = req.params;
+
+    if (!id_proyecto) {
+      return res.status(400).json({
+        error: "ID de proyecto es requerido"
+      });
+    }
+
+    const entregables = await EntregableService.obtenerEntregablesPorProyecto(
+      id_proyecto,
+    );
+
+    return res.status(200).json(entregables);
+
+  } catch (error) {
+    console.error("Error al obtener entregables:", error);
+    return res.status(500).json({
+      error: "Error al obtener los entregables",
+      detalle: error.message
+    });
+  }
+}
+
 async function actualizarEntregable(req, res) {
   try {
     const { id_entregable } = req.params;
@@ -314,7 +339,8 @@ async function obtenerTiposEntregable(req, res) {
 }
 
 export default {
-  obtenerEntregablesPorProyectoYActividad, 
+  obtenerEntregablesPorProyectoYActividad,
+  obtenerEntregablesPorProyecto, 
   deshabilitarEntregable,
   actualizarEntregable,
   extraerTextoDocumento,

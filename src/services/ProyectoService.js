@@ -465,24 +465,50 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
 
 async function listarProyectosDirector() {
     try {
+        // 🔹 Obtener todos los proyectos con sus relaciones
         const proyectos = await Proyecto.findAll({
-            include: [{
-                model: TipoAlcance,
-                attributes: ['nombre']
-            }, {
-                model: Idea,
-                attributes: ['objetivo_general', 'titulo']
-            }, {
-                model: Estado,
-                attributes: ['descripcion']
-            }
-            ],
+            include: [
+                {
+                    model: TipoAlcance,
+                    attributes: ['nombre']
+                },
+                {
+                    model: Idea,
+                    attributes: ['objetivo_general', 'titulo']
+                },
+                {
+                    model: Estado,
+                    attributes: ['descripcion']
+                }
+            ]
         });
-        return proyectos;
+
+        // 🔹 Calcular los porcentajes en paralelo
+        const porcentajesPromises = proyectos.map(p =>
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje del proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retorna 0 si hay error
+            })
+        );
+
+        const porcentajes = await Promise.all(porcentajesPromises);
+
+        // 🔹 Agregar el porcentaje directamente a cada instancia Sequelize
+        const proyectosConPorcentaje = proyectos.map((proyecto, index) => {
+            const plainProyecto = proyecto.get({ plain: true }); // convierte a objeto JS plano
+            return {
+                ...plainProyecto,
+                porcentaje: porcentajes[index]
+            };
+        });
+
+        return proyectosConPorcentaje;
+
     } catch (error) {
-        throw new Error("Error al obtener los proyectos " + error.message);
+        throw new Error("Error al obtener los proyectos del director: " + error.message);
     }
 }
+
 
 async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
     try {
@@ -508,20 +534,21 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                         {
                             model: Actividad,
                             attributes: ['id_actividad'],
-                            include: [{
-                                model: Grupo,
-                                on: {
-                                    '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
-                                    '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
-                                    '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
-                                    '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
-                                },
-                                attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
-                                include: [{
-                                    model: Materia,
-                                    attributes: ['nombre']
-                                }]
-                            }
+                            include: [
+                                {
+                                    model: Grupo,
+                                    on: {
+                                        '$entregables.actividad.codigo_materia$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.codigo_materia' },
+                                        '$entregables.actividad.nombre$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.nombre' },
+                                        '$entregables.actividad.periodo$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.periodo' },
+                                        '$entregables.actividad.anio$': { [db.Sequelize.Op.col]: 'entregables.actividad.Grupo.anio' }
+                                    },
+                                    attributes: ['codigo_materia', 'nombre', 'periodo', 'anio'],
+                                    include: [{
+                                        model: Materia,
+                                        attributes: ['nombre']
+                                    }]
+                                }
                             ]
                         }
                     ]
@@ -544,9 +571,7 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                                         {
                                             model: Usuario,
                                             attributes: ['codigo'],
-                                            where: {
-                                                codigo: codigoEstudiante
-                                            },
+                                            where: { codigo: codigoEstudiante },
                                             required: true
                                         }
                                     ]
@@ -557,11 +582,34 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                 }
             ]
         });
-        return proyectos;
+
+        // Calcular porcentajes en paralelo
+        const porcentajesPromises = proyectos.map(p =>
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Si falla, devolver 0
+            })
+        );
+
+        const porcentajes = await Promise.all(porcentajesPromises);
+
+        // 🔹 Agregar porcentaje a cada proyecto, sin perder datos ni includes
+        const proyectosConPorcentaje = proyectos.map((proyecto, index) => {
+            const plainProyecto = proyecto.get({ plain: true }); // convertir a objeto plano
+            return {
+                ...plainProyecto,
+                porcentaje: porcentajes[index]
+            };
+        });
+
+        return proyectosConPorcentaje;
+
     } catch (error) {
-        throw new Error("Error al obtener los proyectos: " + error.message);
+        throw new Error("Error al obtener los proyectos del estudiante: " + error.message);
     }
 }
+
+
 
 async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
     try {
@@ -623,7 +671,18 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 }
             ]
         });
-        const resultado = proyectos.map(proyecto => {
+
+        // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p => 
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retornar 0 si hay error
+            })
+        );
+
+        const porcentajes = await Promise.all(porcentajesPromises);
+
+        const resultado = proyectos.map((proyecto, index) => {
             // obtener materias asociadas (sin duplicados)
             const materias = [];
 
@@ -639,6 +698,7 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
                 linea_investigacion: proyecto.linea_investigacion,
                 tecnologias: proyecto.tecnologias,
                 fecha_creacion: proyecto.fecha_creacion,
+                porcentaje: porcentajes[index],
                 Tipo_alcance: proyecto.TipoAlcance,
                 Idea: proyecto.Idea,
                 materias: materias
@@ -709,9 +769,18 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
                 }
             ]
         });
+         // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p => 
+            calcularAvanceProyecto(p.id_proyecto).catch(error => {
+                console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
+                return 0; // Retornar 0 si hay error
+            })
+        );
+
+        const porcentajes = await Promise.all(porcentajesPromises);
 
         // 🔹 Formato de salida
-        const resultado = proyectos.map((p) => ({
+        const resultado = proyectos.map((p, index) => ({
             id_proyecto: p.id_proyecto,
             linea_investigacion: p.linea_investigacion,
             tecnologias: p.tecnologias,
@@ -719,6 +788,7 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
             estado: p.Estado?.descripcion || null, // Estado del proyecto
             id_actividad: actividad?.id_actividad || null, // 👈 id_actividad del grupo
             tipo_alcance: actividad?.Tipo_alcance?.nombre || null, // 👈 nombre del tipo de alcance
+            porcentaje: porcentajes[index],
             Idea: {
                 titulo: p.Idea?.titulo,
                 objetivo_general: p.Idea?.objetivo_general,
@@ -1633,6 +1703,36 @@ async function calcularAvanceProyecto(idProyecto) {
         throw new Error("Error al obtener el proyecto " + error.message);
     }
 }
+
+async function obtenerUltimoHistorialPorProyecto(id_proyecto) {
+  try {
+    const historial = await HistorialProyecto.findOne({
+      where: { id_proyecto },
+      include: [
+        {
+          model: Estado,
+          as: "Estado",
+          attributes: ["descripcion"]
+        },
+        {
+          model: Usuario,
+          as: "Usuario",
+          attributes: ["codigo", "nombre"]
+        }
+      ],
+      order: [["fecha", "DESC"]]
+    });
+
+    if (!historial) {
+      throw new Error("No hay historial registrado para esta idea");
+    }
+
+    return historial;
+  } catch (error) {
+    throw new Error("Error al obtener el último historial: " + error.message);
+  }
+}
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyectoPorId,
@@ -1650,6 +1750,7 @@ export default {
     listarTodosProyectosDeUnGrupo,
     verDetalleProyecto,
     generarHistorialProyecto,
+    obtenerUltimoHistorialPorProyecto,
     calcularAvanceProyecto,
     rechazarObservacion
 };
