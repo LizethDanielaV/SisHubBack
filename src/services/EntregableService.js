@@ -54,6 +54,29 @@ async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad
     }
 }
 
+
+
+async function obtenerEntregablesPorProyecto(id_proyecto) {
+    try {
+        const entregables = await Entregable.findAll({
+            where: {
+                id_proyecto,
+            },
+            include: [
+                { model: Estado, attributes: ['id_estado', 'descripcion'] },
+                { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
+                { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
+            ],
+            order: [['fecha_subida', 'DESC']] 
+        });
+
+        return entregables || [];
+    } catch (error) {
+        console.error("Error en servicio al obtener entregables:", error);
+        throw error;
+    }
+}
+
 async function obtenerEntregablePorId(id_entregable) {
     try {
         const entregable = await Entregable.findByPk(id_entregable, {
@@ -657,6 +680,7 @@ export async function obtenerHistorialProyecto(id_proyecto) {
 
 export default {
     obtenerEntregablesPorProyectoYActividad,
+    obtenerEntregablesPorProyecto,
     obtenerHistorialProyecto,
     deshabilitarEntregable,
     obtenerEntregablePorId,

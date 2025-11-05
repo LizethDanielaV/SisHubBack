@@ -430,6 +430,16 @@ async function verDetalleProyecto(req, res) {
   }
 }
 
+async function obtenerUltimoHistorial(req, res) {
+  try {
+    const { id_proyecto } = req.params;
+    const historial = await ProyectoService.obtenerUltimoHistorialPorProyecto(id_proyecto);
+    res.status(200).json(historial);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+}
+
 async function calcularAvanceProyecto(req, res) {
   try {
     const proyecto = await ProyectoService.calcularAvanceProyecto(req.params.id_proyecto);
@@ -444,6 +454,7 @@ export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
     rechazarObservacion,
+    obtenerUltimoHistorial,
     /*listarProyectosPorGrupo,*/
     actualizarProyecto, 
     listarParaDirector, 

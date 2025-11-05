@@ -86,6 +86,12 @@ router.get(
   EntregableController.obtenerEntregablesPorProyectoYActividad
 );
 
+router.get(
+  "/proyecto/:id_proyecto",
+  // verificarToken,
+  EntregableController.obtenerEntregablesPorProyecto
+);
+
 router.post(
   "/extraer-texto",
   // verificarToken,
