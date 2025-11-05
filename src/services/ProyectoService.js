@@ -110,21 +110,23 @@ async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
             id_estado: estadoProyecto.id_estado
         }, { transaction });
 
-        // Obtener el equipo
-        const equipo = await Equipo.findOne({
-            where: {
-                codigo_materia: idea.codigo_materia,
-                nombre: idea.nombre,
-                periodo: idea.periodo,
-                anio: idea.anio
-            }
+        const integrante = await IntegranteEquipo.findOne({
+            where: { codigo_usuario },
+            include: [{ model: Equipo, as: "equipo" }]
         });
+
+        if (!integrante || !integrante.equipo) {
+            throw new Error("El usuario no pertenece a ningún equipo válido para esta idea.");
+        }
+
+        const equipo = integrante.equipo;
 
         // Registrar en historial
         await HistorialProyecto.create({
             id_proyecto: nuevoProyecto.id_proyecto,
             id_estado: idea.id_estado,
             codigo_usuario: codigo_usuario,
+            id_equipo: equipo.id_equipo,
             observacion: `Proyecto creado a partir de la idea aprobada "${idea.titulo}". Tipo de alcance: ${actividad.Tipo_alcance.nombre}.`
         }, { transaction });
 
@@ -782,7 +784,7 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
             transaction
         });
         console.log(equipo);
-        
+
         // Registrar en historial
         const historialProyecto = await HistorialProyecto.create({
             fecha: new Date(),
@@ -801,20 +803,20 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
         console.log("aquiiii" + equipo.id_equipo);
         //obtener integrantes del equipo 
         const integrantes = await IntegranteEquipo.findAll({
-            where: {id_equipo: equipo.id_equipo}, 
-            attributes: {codigo_usuario}
-        }); 
-         if (mensaje && mensaje.id_mensaje) {
+            where: { id_equipo: equipo.id_equipo },
+            attributes: { codigo_usuario }
+        });
+        if (mensaje && mensaje.id_mensaje) {
             await Promise.all(
-            integrantes.map(integrante => 
-                NotificacionService.crearNotificacion(
-                    integrante.codigo_usuario, mensaje.id_mensaje
+                integrantes.map(integrante =>
+                    NotificacionService.crearNotificacion(
+                        integrante.codigo_usuario, mensaje.id_mensaje
+                    )
                 )
-            )
             );
-         }
-    
-         await transaction.commit();
+        }
+
+        await transaction.commit();
 
         return { message: "Proyecto calificado exitosamente.", proyecto };
     } catch (error) {

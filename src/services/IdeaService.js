@@ -890,6 +890,7 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
 
 async function verificarIdeaYProyecto(codigo_usuario, grupo) {
   try {
+    // 1️⃣ Buscar idea
     const idea = await Idea.findOne({
       where: {
         codigo_usuario,
@@ -903,6 +904,7 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
       ]
     });
 
+    // 2️⃣ Buscar equipo activo en ese grupo con el usuario
     const equipo = await Equipo.findOne({
       where: {
         codigo_materia: grupo.codigo_materia,
@@ -921,6 +923,7 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
       ]
     });
 
+    // 3️⃣ Buscar proyecto solo si hay idea
     let proyecto = null;
     if (idea) {
       proyecto = await Proyecto.findOne({
@@ -931,24 +934,49 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
       });
     }
 
-    // 4️⃣ Respuesta estructurada
+    // 4️⃣ Verificación especial cuando ambos estados son null
+    let estadoIdea = idea?.Estado?.descripcion || null;
+    let estadoProyecto = proyecto?.Estado?.descripcion || null;
+
+    if (!estadoIdea && !estadoProyecto) {
+      // Verificamos si pertenece a un equipo activo
+      if (equipo && equipo.estado === true) {
+        // Si tiene un equipo activo => ya trabajó un proyecto
+        estadoIdea = "APROBADO";
+        estadoProyecto = "CALIFICADO";
+      } else {
+        // No tiene equipo activo => puede crear idea
+        estadoIdea = null;
+        estadoProyecto = null;
+      }
+    }
+
+    // 5️⃣ Respuesta final
     return {
       tieneIdea: !!idea,
       idea: idea
         ? {
             id_idea: idea.id_idea,
             titulo: idea.titulo,
-            estado: idea.Estado.descripcion
+            estado: estadoIdea
           }
-        : null,
+        : {
+            id_idea: null,
+            titulo: null,
+            estado: estadoIdea
+          },
       tieneProyecto: !!proyecto,
       proyecto: proyecto
         ? {
             id_proyecto: proyecto.id_proyecto,
             titulo: proyecto.titulo,
-            estado: proyecto.Estado.descripcion
+            estado: estadoProyecto
           }
-        : null,
+        : {
+            id_proyecto: null,
+            titulo: null,
+            estado: estadoProyecto
+          },
       equipo: equipo
         ? {
             id_equipo: equipo.id_equipo,
@@ -961,6 +989,7 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
     throw new Error("Error al verificar idea y proyecto: " + error.message);
   }
 }
+
 
 async function obtenerUltimoHistorialPorIdea(id_idea) {
   try {

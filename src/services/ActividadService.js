@@ -143,7 +143,6 @@
   }
 }
 
-
 async function obtenerActividadById(id_actividad) {
   try {
     const actividad = await Actividad.findByPk(id_actividad, {
