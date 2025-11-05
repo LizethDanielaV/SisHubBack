@@ -66,11 +66,11 @@ async function crearProyectoDesdeIdea(req, res) {
 }
 
 async function rechazarObservacion(req, res) {
-    const { id_proyecto } = req.params;
-    const { codigo_usuario } = req.body;
+    const { id_idea } = req.params;
+    const { codigo_usuario, id_proyecto } = req.body;
 
     try {
-      const result = await ProyectoService.rechazarObservacion(id_proyecto, codigo_usuario);
+      const result = await ProyectoService.rechazarObservacion(id_idea, id_proyecto, codigo_usuario);
       res.status(200).json({
         success: true,
         message: result.message,

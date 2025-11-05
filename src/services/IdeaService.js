@@ -721,7 +721,6 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
         const idea = await Idea.findByPk(id_idea);
         if (!idea) throw new Error("Idea no encontrada");
 
-        // Validar acción permitida
         const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
         if (!accionesValidas.includes(accion)) {
             throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
@@ -745,6 +744,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                 nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" } });
                 mensaje = "Idea rechazada. El estudiante deberá crear una nueva propuesta.";
 
+                // 🔹 Buscar equipos del grupo
                 const equiposDelGrupo = await Equipo.findAll({
                     where: {
                         codigo_materia: idea.codigo_materia,
@@ -758,34 +758,28 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                 const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
 
                 if (idsEquipos.length > 0) {
-                    const lider = await IntegranteEquipo.findOne({
-                        where: {
-                            codigo_usuario: idea.codigo_usuario,
-                            es_lider: true,
-                            id_equipo: { [Op.in]: idsEquipos }
-                        },
-                        include: [{ model: Equipo }],
+                    // 🔸 Eliminar integrantes y equipo
+                    await IntegranteEquipo.destroy({
+                        where: { id_equipo: { [Op.in]: idsEquipos } },
                         transaction
                     });
 
-                    if (lider && lider.equipo) {
-                        const equipo = lider.equipo;
-                        equipo.estado = false;
-                        await equipo.save({ transaction });
-                    }
+                    await Equipo.destroy({
+                        where: { id_equipo: { [Op.in]: idsEquipos } },
+                        transaction
+                    });
                 }
 
-                // Cambiar campos de la idea
+                // 🔹 Restablecer idea
+                const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" } });
+                if (!estadoLibre) throw new Error("No se encontró el estado LIBRE.");
+
+                idea.id_estado = estadoLibre.id_estado;
                 idea.codigo_materia = null;
                 idea.nombre = null;
                 idea.periodo = null;
                 idea.anio = null;
-                idea.codigo_usuario = null; // <--- se deja sin usuario
-                // Buscar estado "LIBRE" y asignarlo
-                const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" } });
-                if (!estadoLibre) throw new Error("No se encontró el estado LIBRE.");
-                idea.id_estado = estadoLibre.id_estado;
-
+                idea.codigo_usuario = null;
                 await idea.save({ transaction });
                 break;
         }
@@ -796,7 +790,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
             await idea.save({ transaction });
         }
 
-        // Registrar en historial
+        // 🔹 Registrar en historial
         const textoObservacion = observacion
             ? `${mensaje} Observaciones: ${observacion}`
             : mensaje;
@@ -811,6 +805,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
 
         await transaction.commit();
         return { message: mensaje, idea };
+
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al revisar la idea: " + error.message);
@@ -824,12 +819,10 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
         const idea = await Idea.findByPk(id_idea);
         if (!idea) throw new Error("Idea no encontrada");
 
-        // Validar que la idea esté en estado STAND_BY
         const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
         if (idea.id_estado !== estadoStandBy.id_estado)
             throw new Error("Solo se pueden mover al banco las ideas en estado 'Aprobada con observaciones'.");
 
-        // Buscar estado de destino EN_BANCO
         const estadoBanco = await Estado.findOne({ where: { descripcion: "LIBRE" } });
         if (!estadoBanco) throw new Error("Estado 'LIBRE' no encontrado");
 
@@ -845,25 +838,20 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
 
         const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
 
-        const lider = await IntegranteEquipo.findOne({
-            where: {
-                codigo_usuario: codigo_usuario,
-                es_lider: true,
-                id_equipo: idsEquipos.length > 0 ? { [Op.in]: idsEquipos } : null
-            }, include: [{ model: Equipo }]
-        });
+        if (idsEquipos.length > 0) {
+            // 🔸 Eliminar integrantes y equipo asociados
+            await IntegranteEquipo.destroy({
+                where: { id_equipo: { [Op.in]: idsEquipos } },
+                transaction
+            });
 
-        if (!lider || !lider.es_lider) {
-            throw new Error("Solo el líder del equipo puede realizar esta acción.");
+            await Equipo.destroy({
+                where: { id_equipo: { [Op.in]: idsEquipos } },
+                transaction
+            });
         }
 
-
-        // 5️⃣ Desactivar ese equipo
-        const equipo = lider.equipo;
-        equipo.estado = false;
-        await equipo.save({ transaction });
-
-        // Cambiar estado
+        // 🔹 Limpiar datos de la idea y actualizar estado
         idea.id_estado = estadoBanco.id_estado;
         idea.codigo_usuario = null;
         idea.codigo_materia = null;
@@ -872,7 +860,7 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
         idea.anio = null;
         await idea.save({ transaction });
 
-        // Registrar en historial
+        // 🔹 Registrar en historial
         await HistorialIdea.create({
             fecha: new Date(),
             observacion: "El estudiante decidió no corregir la idea. Movida al banco de ideas.",
@@ -880,13 +868,16 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
             id_idea: idea.id_idea,
             codigo_usuario
         }, { transaction });
+
         await transaction.commit();
-        return { message: "Idea movida al banco de ideas exitosamente.", idea };
+        return { message: "Idea movida al banco de ideas y equipo eliminado exitosamente.", idea };
+
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al mover la idea al banco: " + error.message);
     }
 }
+
 
 async function verificarIdeaYProyecto(codigo_usuario, grupo) {
   try {

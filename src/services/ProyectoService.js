@@ -835,10 +835,7 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
         if (!accionesValidas.includes(accion)) throw new Error("Acción no válida.");
 
         const proyecto = await Proyecto.findByPk(id_proyecto, {
-            include: [
-                { model: Idea },
-                { model: Estado }
-            ],
+            include: [{ model: Idea }, { model: Estado }],
             transaction,
         });
 
@@ -848,9 +845,9 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
         let nuevoEstadoIdea = null;
         let mensaje = "";
         let idEquipoHistorial = null;
-        let lider;
+        let lider = null;
 
-        // Buscar equipos del grupo
+        // 🔹 Buscar equipos relacionados al grupo del proyecto
         const equiposDelGrupo = await Equipo.findAll({
             where: {
                 codigo_materia: proyecto.Idea.codigo_materia,
@@ -859,6 +856,7 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
                 anio: proyecto.Idea.anio,
             },
             attributes: ["id_equipo"],
+            transaction,
         });
 
         const idsEquipos = equiposDelGrupo.map((e) => e.id_equipo);
@@ -870,24 +868,33 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
                     es_lider: true,
                     id_equipo: { [Op.in]: idsEquipos },
                 },
-                include: [{ model: Equipo }],
+                include: [{ model: Equipo, as: "equipo" }],
                 transaction,
             });
         }
 
-        // Estados de referencia
-        const estadoEnCurso = await Estado.findOne({ where: { descripcion: "EN_CURSO" }, transaction });
-        const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction });
-        const estadoRechazado = await Estado.findOne({ where: { descripcion: "RECHAZADO" }, transaction });
-        const estadoCalificado = await Estado.findOne({ where: { descripcion: "CALIFICADO" }, transaction });
-        const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" }, transaction });
-        const estadoAprobada = await Estado.findOne({ where: { descripcion: "APROBADA" }, transaction });
+        // 🔹 Estados de referencia
+        const [
+            estadoEnCurso,
+            estadoStandBy,
+            estadoRechazado,
+            estadoCalificado,
+            estadoLibre,
+            estadoAprobada,
+        ] = await Promise.all([
+            Estado.findOne({ where: { descripcion: "EN_CURSO" }, transaction }),
+            Estado.findOne({ where: { descripcion: "STAND_BY" }, transaction }),
+            Estado.findOne({ where: { descripcion: "RECHAZADO" }, transaction }),
+            Estado.findOne({ where: { descripcion: "CALIFICADO" }, transaction }),
+            Estado.findOne({ where: { descripcion: "LIBRE" }, transaction }),
+            Estado.findOne({ where: { descripcion: "APROBADO" }, transaction }),
+        ]);
 
-        // Verificación
-        if (!estadoEnCurso || !estadoStandBy || !estadoRechazado)
-            throw new Error("No se encontraron los estados requeridos.");
+        if (!estadoEnCurso || !estadoStandBy || !estadoRechazado || !estadoCalificado || !estadoLibre || !estadoAprobada) {
+            throw new Error("No se encontraron todos los estados requeridos en la base de datos.");
+        }
 
-        // 🔁 Lógica según acción
+        // 🔁 Lógica principal
         switch (accion) {
             case "Aprobar":
                 nuevoEstadoProyecto = estadoEnCurso;
@@ -896,8 +903,7 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
                 break;
 
             case "Aprobar_Con_Observacion":
-                // proyecto.Estado ahora existe
-                nuevoEstadoProyecto = proyecto.Estado; // objeto completo Estado
+                nuevoEstadoProyecto = proyecto.Estado || estadoEnCurso;
                 nuevoEstadoIdea = estadoStandBy;
                 mensaje = "Proyecto aprobado con observaciones.";
                 break;
@@ -905,28 +911,45 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
             case "Rechazar":
                 nuevoEstadoProyecto = estadoCalificado;
 
-                if (proyecto.Estado?.descripcion === estadoCalificado.descripcion) {
+                if (proyecto.Estado?.descripcion === "CALIFICADO") {
                     nuevoEstadoIdea = estadoAprobada;
                 } else {
                     nuevoEstadoIdea = estadoLibre;
-
-                    if (lider && lider.equipo) {
-                        lider.equipo.estado = false;
-                        await lider.equipo.save({ transaction });
-                        idEquipoHistorial = lider.equipo.id_equipo;
-                    }
-
-                    proyecto.Idea.codigo_materia = null;
-                    proyecto.Idea.nombre = null;
-                    proyecto.Idea.periodo = null;
-                    proyecto.Idea.anio = null;
-                    await proyecto.Idea.save({ transaction });
                 }
 
-                mensaje = "Proyecto rechazado. El equipo deberá presentar una nueva propuesta.";
+                // 🔹 Eliminar equipos e integrantes asociados
+                if (idsEquipos.length > 0) {
+                    await IntegranteEquipo.destroy({
+                        where: { id_equipo: { [Op.in]: idsEquipos } },
+                        transaction,
+                    });
+
+                    await Equipo.destroy({
+                        where: { id_equipo: { [Op.in]: idsEquipos } },
+                        transaction,
+                    });
+                }
+
+                // 🔹 Liberar la idea (grupo en null)
+                Object.assign(proyecto.Idea, {
+                    codigo_materia: null,
+                    nombre: null,
+                    periodo: null,
+                    anio: null,
+                });
+                await proyecto.Idea.save({ transaction });
+
+                mensaje = "Proyecto rechazado. El equipo y sus integrantes fueron eliminados, y la idea liberada.";
                 break;
         }
 
+        // ✅ Validación antes de asignar los estados
+        if (!nuevoEstadoProyecto?.id_estado)
+            throw new Error("No se pudo determinar el nuevo estado del proyecto.");
+        if (!nuevoEstadoIdea?.id_estado)
+            throw new Error("No se pudo determinar el nuevo estado de la idea.");
+
+        // 🔹 Actualizar estados
         proyecto.id_estado = nuevoEstadoProyecto.id_estado;
         await proyecto.save({ transaction });
 
@@ -939,30 +962,36 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
             idEquipoHistorial = lider.equipo.id_equipo;
         }
 
-        // 🕓 Historial
+        // 🕓 Registrar historial (sin equipo si fue eliminado)
         const textoObservacion = observacion
             ? `${mensaje} Observaciones: ${observacion}`
             : mensaje;
 
-        await HistorialProyecto.create(
-            {
-                fecha: new Date(),
-                observacion: textoObservacion,
-                id_estado: nuevoEstadoProyecto.id_estado,
-                id_proyecto,
-                codigo_usuario,
-                id_equipo: idEquipoHistorial,
-            },
-            { transaction }
-        );
+        const historialData = {
+            fecha: new Date(),
+            observacion: textoObservacion,
+            id_estado: nuevoEstadoProyecto.id_estado,
+            id_proyecto,
+            codigo_usuario,
+        };
+
+        // Solo asociar equipo si no fue eliminado
+        if (accion !== "Rechazar" && idEquipoHistorial) {
+            historialData.id_equipo = idEquipoHistorial;
+        }
+
+        await HistorialProyecto.create(historialData, { transaction });
 
         await transaction.commit();
         return { message: mensaje, proyecto };
+
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al revisar el proyecto: " + error.message);
     }
 }
+
+
 
 async function liberarProyecto(idProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -1128,21 +1157,17 @@ async function listarPropuestasLibres() {
     }
 }
 
-export async function rechazarObservacion(id_idea, codigo_usuario) {
+async function rechazarObservacion(id_idea, id_proyecto, codigo_usuario) {
     const transaction = await db.transaction();
     try {
         if (!codigo_usuario)
             throw new Error("Debe especificar el código del usuario que realiza la revisión.");
 
-        const idea = await Idea.findByPk(id_idea, {
-            include: [{ model: Proyecto }],
-            transaction,
-        });
+        const idea = await Idea.findByPk(id_idea, { transaction });
         if (!idea) throw new Error("Idea no encontrada.");
 
-        if (!idea.Proyecto) throw new Error("No hay proyecto asociado a esta idea.");
-
-        const proyecto = idea.Proyecto;
+        const proyecto = await Proyecto.findByPk(id_proyecto, { transaction });
+        if (!proyecto) throw new Error("Proyecto no encontrado.");
 
         // 🔹 Buscar estados necesarios
         const estadoSeleccionado = await Estado.findOne({ where: { descripcion: "SELECCIONADO" }, transaction });
@@ -1165,37 +1190,76 @@ export async function rechazarObservacion(id_idea, codigo_usuario) {
                 nuevoEstadoIdea = estadoLibre;
             }
             mensaje = "Proyecto rechazado. Pasó de SELECCIONADO a CALIFICADO. La idea quedó LIBRE.";
-        }
+        } 
         else if (proyecto.id_estado === estadoCalificado.id_estado) {
             nuevoEstadoProyecto = estadoCalificado; // se mantiene
             if (idea.id_estado === estadoStandBy.id_estado) {
                 nuevoEstadoIdea = estadoAprobado;
             }
             mensaje = "Proyecto rechazado (mantiene estado CALIFICADO). La idea pasó a APROBADO.";
-        }
+        } 
         else {
             mensaje = "El proyecto no se encontraba en un estado válido para rechazo.";
         }
 
-        // 🔹 Guardar cambios
-        proyecto.id_estado = nuevoEstadoProyecto.id_estado;
-        await proyecto.save({ transaction });
+        // 🔹 Buscar y eliminar equipos asociados al grupo de la idea (como moverIdeaAlBancoPorDecision)
+        const equiposDelGrupo = await Equipo.findAll({
+            where: {
+                codigo_materia: idea.codigo_materia,
+                nombre: idea.nombre,
+                periodo: idea.periodo,
+                anio: idea.anio
+            },
+            attributes: ['id_equipo'],
+            transaction
+        });
 
-        idea.id_estado = nuevoEstadoIdea.id_estado;
-        await idea.save({ transaction });
+        const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
 
-        // 🔹 Registrar historial
+        if (idsEquipos.length > 0) {
+            await IntegranteEquipo.destroy({
+                where: { id_equipo: { [Op.in]: idsEquipos } },
+                transaction
+            });
+
+            await Equipo.destroy({
+                where: { id_equipo: { [Op.in]: idsEquipos } },
+                transaction
+            });
+        }
+
+        // 🔹 Actualizar proyecto
+        await proyecto.update({ id_estado: nuevoEstadoProyecto.id_estado }, { transaction });
+
+        // 🔹 Actualizar idea
+        await idea.update(
+            {
+                id_estado: nuevoEstadoIdea.id_estado,
+                codigo_materia: null,
+                nombre: null,
+                periodo: null,
+                anio: null
+            },
+            { transaction }
+        );
+
+        // 🔹 Registrar historial del proyecto
         await HistorialProyecto.create({
             fecha: new Date(),
             observacion:
-                "El estudiante decidió no corregir las observaciones del profesor para continuar el proyecto.",
+                "El estudiante decidió no corregir las observaciones del profesor. La idea fue liberada y el equipo eliminado.",
             id_estado: nuevoEstadoProyecto.id_estado,
             id_proyecto: proyecto.id_proyecto,
-            codigo_usuario,
+            codigo_usuario
         }, { transaction });
 
         await transaction.commit();
-        return { message: mensaje, proyecto, idea };
+
+        return {
+            message: mensaje + " El equipo y sus integrantes fueron eliminados correctamente.",
+            proyecto,
+            idea
+        };
 
     } catch (error) {
         await transaction.rollback();
@@ -1308,27 +1372,52 @@ async function continuarProyecto(idProyecto, codigo_usuario, nuevoGrupo) {
         if (!proyecto) throw new Error("Proyecto no encontrado.");
         if (!proyecto.Idea) throw new Error("El proyecto no tiene idea asociada.");
 
-        // Verificar que el proyecto esté CALIFICADO
+        // 🔹 Verificar que el proyecto esté CALIFICADO
         const estadoCalificado = await Estado.findOne({
             where: { descripcion: "CALIFICADO" },
             transaction: t
         });
-        if (!estadoCalificado) throw new Error("No existe el estado CALIFICADO en la tabla Estado.");
+        if (!estadoCalificado)
+            throw new Error("No existe el estado CALIFICADO en la tabla Estado.");
+
         if (proyecto.id_estado !== estadoCalificado.id_estado) {
             throw new Error("Solo se pueden continuar proyectos con estado CALIFICADO.");
         }
 
-        // Obtener estado REVISION
+        // 🔹 Obtener estado REVISION
         const estadoRevision = await Estado.findOne({
             where: { descripcion: "REVISION" },
             transaction: t
         });
-        if (!estadoRevision) throw new Error("No se encontró el estado REVISION.");
+        if (!estadoRevision)
+            throw new Error("No se encontró el estado REVISION.");
 
-        // Actualizar la idea: cambiar estado y asignar al nuevo grupo
+        const nuevoEquipo = await Equipo.create(
+            {
+                descripcion: `Equipo de ${codigo_usuario}`,
+                codigo_materia: nuevoGrupo.codigo_materia,
+                nombre: nuevoGrupo.nombre,
+                periodo: nuevoGrupo.periodo,
+                anio: nuevoGrupo.anio,
+                estado: true
+            },
+            { transaction: t }
+        );
+
+        await IntegranteEquipo.create(
+            {
+                codigo_usuario,
+                id_equipo: nuevoEquipo.id_equipo,
+                rol_equipo: "Líder",
+                es_lider: true
+            },
+            { transaction: t }
+        );
+
         await proyecto.Idea.update(
             {
                 id_estado: estadoRevision.id_estado,
+                codigo_usuario,
                 codigo_materia: nuevoGrupo.codigo_materia,
                 nombre: nuevoGrupo.nombre,
                 periodo: nuevoGrupo.periodo,
@@ -1337,14 +1426,15 @@ async function continuarProyecto(idProyecto, codigo_usuario, nuevoGrupo) {
             { transaction: t }
         );
 
-        // Registrar en historial
+        // 🔹 Registrar en historial
         await HistorialProyecto.create(
             {
                 id_proyecto: idProyecto,
                 id_estado: estadoRevision.id_estado,
                 codigo_usuario,
-                observacion: `El proyecto fue continuado por el usuario ${codigo_usuario}. La idea asociada pasó a estado REVISION y se asignó al nuevo grupo.`,
-                fecha: new Date()
+                observacion: `El proyecto fue continuado por el usuario ${codigo_usuario}. Se creó un nuevo equipo y la idea pasó a estado REVISION.`,
+                fecha: new Date(),
+                id_equipo: nuevoEquipo.id_equipo
             },
             { transaction: t }
         );
@@ -1352,15 +1442,15 @@ async function continuarProyecto(idProyecto, codigo_usuario, nuevoGrupo) {
         await t.commit();
 
         return {
-            message: "Proyecto continuado correctamente. La idea pasó a estado REVISION y se asignó al nuevo grupo.",
-            proyecto
+            message: "Proyecto continuado correctamente. Se creó un nuevo equipo y la idea pasó a estado REVISION.",
+            proyecto,
+            equipo: nuevoEquipo
         };
     } catch (error) {
         await t.rollback();
         throw new Error("Error al continuar proyecto: " + error.message);
     }
 }
-
 
 async function obtenerProyectosContinuables(codigo_usuario) {
     try {
