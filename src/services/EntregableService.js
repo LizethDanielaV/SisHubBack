@@ -39,7 +39,7 @@ async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad
                 id_actividad
             },
             include: [
-                { model: Estado, attributes: ['id_estado', 'descripcion'], where: { descripcion: 'CALIFICADO' } },
+                { model: Estado, attributes: ['id_estado', 'descripcion'] },
                 { model: Actividad, attributes: ['id_actividad', 'titulo'] },
                 { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
                 { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
