@@ -881,21 +881,8 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
 
 async function verificarIdeaYProyecto(codigo_usuario, grupo) {
   try {
-    // 1️⃣ Buscar idea
-    const idea = await Idea.findOne({
-      where: {
-        codigo_usuario,
-        codigo_materia: grupo.codigo_materia,
-        nombre: grupo.nombre,
-        periodo: grupo.periodo,
-        anio: grupo.anio
-      },
-      include: [
-        { model: Estado, as: "Estado", attributes: ["descripcion"] }
-      ]
-    });
-
-    // 2️⃣ Buscar equipo activo en ese grupo con el usuario
+    // 1️⃣ Buscar equipo activo del usuario en el grupo
+    console.log("codigo usuario", codigo_usuario);
     const equipo = await Equipo.findOne({
       where: {
         codigo_materia: grupo.codigo_materia,
@@ -909,40 +896,61 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
           model: IntegranteEquipo,
           as: "Integrante_Equipos",
           where: { codigo_usuario },
-          required: false
+          required: true
         }
       ]
     });
 
-    // 3️⃣ Buscar proyecto solo si hay idea
+    // Si no pertenece a un equipo activo, puede crear idea nueva
+    if (!equipo) {
+      return {
+        tieneIdea: false,
+        idea: null,
+        tieneProyecto: false,
+        proyecto: null,
+        equipo: null
+      };
+    }
+
+    // 2️⃣ Buscar líder del equipo (estado y lider = true)
+    const lider = await IntegranteEquipo.findOne({
+      where: {
+        id_equipo: equipo.id_equipo,
+        es_lider: true
+      }
+    });
+
+    if (!lider) {
+      throw new Error("El equipo activo no tiene un líder asignado.");
+    }
+
+    console.log("lider", lider);
+    // 3️⃣ Buscar idea del líder (no del usuario)
+    const idea = await Idea.findOne({
+      where: {
+        codigo_usuario: lider.codigo_usuario,
+        codigo_materia: grupo.codigo_materia,
+        nombre: grupo.nombre,
+        periodo: grupo.periodo,
+        anio: grupo.anio
+      },
+      include: [{ model: Estado, as: "Estado", attributes: ["descripcion"] }]
+    });
+
+    // 4️⃣ Buscar proyecto asociado a esa idea (si existe)
     let proyecto = null;
     if (idea) {
       proyecto = await Proyecto.findOne({
         where: { id_idea: idea.id_idea },
-        include: [
-          { model: Estado, as: "Estado", attributes: ["descripcion"] }
-        ]
+        include: [{ model: Estado, as: "Estado", attributes: ["descripcion"] }]
       });
     }
 
-    // 4️⃣ Verificación especial cuando ambos estados son null
-    let estadoIdea = idea?.Estado?.descripcion || null;
-    let estadoProyecto = proyecto?.Estado?.descripcion || null;
+    // 5️⃣ Determinar estados
+    const estadoIdea = idea?.Estado?.descripcion || null;
+    const estadoProyecto = proyecto?.Estado?.descripcion || null;
 
-    if (!estadoIdea && !estadoProyecto) {
-      // Verificamos si pertenece a un equipo activo
-      if (equipo && equipo.estado === true) {
-        // Si tiene un equipo activo => ya trabajó un proyecto
-        estadoIdea = "APROBADO";
-        estadoProyecto = "CALIFICADO";
-      } else {
-        // No tiene equipo activo => puede crear idea
-        estadoIdea = null;
-        estadoProyecto = null;
-      }
-    }
-
-    // 5️⃣ Respuesta final
+    // 6️⃣ Retornar resultados
     return {
       tieneIdea: !!idea,
       idea: idea
@@ -951,11 +959,7 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
             titulo: idea.titulo,
             estado: estadoIdea
           }
-        : {
-            id_idea: null,
-            titulo: null,
-            estado: estadoIdea
-          },
+        : null,
       tieneProyecto: !!proyecto,
       proyecto: proyecto
         ? {
@@ -963,23 +967,19 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
             titulo: proyecto.titulo,
             estado: estadoProyecto
           }
-        : {
-            id_proyecto: null,
-            titulo: null,
-            estado: estadoProyecto
-          },
-      equipo: equipo
-        ? {
-            id_equipo: equipo.id_equipo,
-            activo: equipo.estado,
-            miembros: equipo.Integrante_Equipos.length
-          }
-        : null
+        : null,
+      equipo: {
+        id_equipo: equipo.id_equipo,
+        activo: equipo.estado,
+        lider: lider.codigo_usuario,
+        miembros: equipo.Integrante_Equipos.length
+      }
     };
   } catch (error) {
     throw new Error("Error al verificar idea y proyecto: " + error.message);
   }
 }
+
 
 
 async function obtenerUltimoHistorialPorIdea(id_idea) {
