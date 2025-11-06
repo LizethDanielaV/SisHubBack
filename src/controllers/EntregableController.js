@@ -67,7 +67,7 @@ async function actualizarEntregable(req, res) {
       return res.status(400).json({ error: "Código de usuario requerido" });
     }
 
-    const entregableExistente = await EntregableService.obtenerEntregablePorId(id_entregable);
+    const entregableExistente = await EntregableService.obtenerEntregablePorIdCalificado(id_entregable);
 
     if (!entregableExistente) {
       return res.status(404).json({ error: "Entregable no encontrado" });
