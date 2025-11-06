@@ -521,7 +521,13 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                 },
                 {
                     model: Idea,
-                    attributes: ['titulo', 'objetivo_general']
+                    attributes: ['titulo', 'objetivo_general'],
+                    include: [
+                        {
+                            model: Estado,
+                            attributes: ['descripcion']
+                        }
+                    ]
                 },
                 {
                     model: Estado,
@@ -561,7 +567,8 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
                         {
                             model: Equipo,
                             required: true,
-                            attributes: [],
+                            attributes: ['id_equipo', 'estado'], // Agregar estado para debugging
+                            where: { estado: true }, // Solo equipos activos
                             include: [
                                 {
                                     model: IntegrantesEquipo,
@@ -583,8 +590,28 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
             ]
         });
 
-        // Calcular porcentajes en paralelo
-        const porcentajesPromises = proyectos.map(p =>
+        console.log(`🔍 Proyectos encontrados ANTES de filtros: ${proyectos.length}`);
+        proyectos.forEach(p => {
+            const historiales = p.Historial_Proyectos || [];
+            console.log(`  - Proyecto ${p.id_proyecto}: ${p.Idea?.titulo} | Estado idea: ${p.Idea?.Estado?.descripcion} | ${historiales.length} historiales`);
+            historiales.forEach((h, idx) => {
+                console.log(`    Historial ${idx}: equipo ${h.equipo?.id_equipo} estado ${h.equipo?.estado}`);
+            });
+        });
+
+        // Filtrar proyectos con ideas que NO estén en estado LIBRE
+        const proyectosFiltrados = proyectos.filter(p => {
+            const estadoIdea = p.Idea?.Estado?.descripcion;
+            return estadoIdea !== 'LIBRE';
+        });
+
+        console.log(`🔍 Proyectos DESPUÉS de filtrar LIBRE: ${proyectosFiltrados.length}`);
+        proyectosFiltrados.forEach(p => {
+            console.log(`  - Proyecto ${p.id_proyecto}: ${p.Idea?.titulo} | Estado: ${p.Idea?.Estado?.descripcion}`);
+        });
+
+        // Calcular porcentajes en paralelo para proyectos filtrados
+        const porcentajesPromises = proyectosFiltrados.map(p =>
             calcularAvanceProyecto(p.id_proyecto).catch(error => {
                 console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
                 return 0; // Si falla, devolver 0
@@ -593,8 +620,8 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
 
         const porcentajes = await Promise.all(porcentajesPromises);
 
-        // 🔹 Agregar porcentaje a cada proyecto, sin perder datos ni includes
-        const proyectosConPorcentaje = proyectos.map((proyecto, index) => {
+        // 🔹 Agregar porcentaje a cada proyecto filtrado, sin perder datos ni includes
+        const proyectosConPorcentaje = proyectosFiltrados.map((proyecto, index) => {
             const plainProyecto = proyecto.get({ plain: true }); // convertir a objeto plano
             return {
                 ...plainProyecto,
@@ -608,8 +635,6 @@ async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
         throw new Error("Error al obtener los proyectos del estudiante: " + error.message);
     }
 }
-
-
 
 async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
     try {
@@ -1340,6 +1365,7 @@ async function rechazarObservacion(id_idea, id_proyecto, codigo_usuario) {
 async function adoptarPropuesta(id_proyecto, codigo_usuario, grupo) {
     const t = await db.transaction();
 
+    console.log("Adoptando propuesta...", id_proyecto);
     try {
         const proyecto = await Proyecto.findByPk(id_proyecto, {
             include: [{ model: Idea, as: "Idea" }],

@@ -521,6 +521,7 @@ async function obtenerIdeaPorId(idIdea) {
 
 async function listarIdeasLibres() {
   try {
+    // 🔹 Buscar el estado 'LIBRE'
     const estadoLibre = await Estado.findOne({
       where: { descripcion: "LIBRE" },
       attributes: ["id_estado"],
@@ -530,10 +531,9 @@ async function listarIdeasLibres() {
       throw new Error("No se encontró el estado 'LIBRE' en la base de datos");
     }
 
+    // 🔹 Buscar las ideas con estado LIBRE
     const ideas = await Idea.findAll({
-      where: {
-        id_estado: estadoLibre.id_estado,
-      },
+      where: { id_estado: estadoLibre.id_estado },
       attributes: [
         "id_idea",
         "titulo",
@@ -554,19 +554,23 @@ async function listarIdeasLibres() {
         },
         {
           model: Proyecto,
+          as: "proyectos", // ✅ Alias correcto
           required: false, // LEFT JOIN
           attributes: ["id_proyecto"],
         },
       ],
       order: [["id_idea", "DESC"]],
+      limit: 100,
       raw: true,
     });
 
-    // ✅ Solo mantener ideas sin proyecto asociado
-    const ideasSinProyecto = ideas.filter(i => i["Proyectos.id_proyecto"] === null);
+    // 🔹 Filtrar las ideas sin proyecto asociado
+    const ideasSinProyecto = ideas.filter(
+      (i) => i["proyectos.id_proyecto"] === null
+    );
 
-    // ✅ Mapear para tener `estado` como campo plano
-    const resultado = ideasSinProyecto.map(i => ({
+    // 🔹 Mapear resultado final con estado plano
+    const resultado = ideasSinProyecto.map((i) => ({
       id_idea: i.id_idea,
       titulo: i.titulo,
       problema: i.problema,
@@ -577,13 +581,15 @@ async function listarIdeasLibres() {
       nombre: i.nombre,
       periodo: i.periodo,
       anio: i.anio,
-      estado: i["Estado.descripcion"], // estado fuera del include
+      estado: i["Estado.descripcion"],
     }));
 
     return resultado;
   } catch (error) {
     console.error("Error al listar ideas LIBRES:", error);
-    throw new Error("No fue posible listar las ideas con estado LIBRE y sin proyecto asociado");
+    throw new Error(
+      "No fue posible listar las ideas con estado LIBRE y sin proyecto asociado"
+    );
   }
 }
 
@@ -881,7 +887,6 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
 
 async function verificarIdeaYProyecto(codigo_usuario, grupo) {
   try {
-    // 1️⃣ Buscar equipo activo del usuario en el grupo
     console.log("codigo usuario", codigo_usuario);
     const equipo = await Equipo.findOne({
       where: {
@@ -912,7 +917,6 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
       };
     }
 
-    // 2️⃣ Buscar líder del equipo (estado y lider = true)
     const lider = await IntegranteEquipo.findOne({
       where: {
         id_equipo: equipo.id_equipo,
@@ -925,7 +929,6 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
     }
 
     console.log("lider", lider);
-    // 3️⃣ Buscar idea del líder (no del usuario)
     const idea = await Idea.findOne({
       where: {
         codigo_usuario: lider.codigo_usuario,
@@ -937,20 +940,18 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
       include: [{ model: Estado, as: "Estado", attributes: ["descripcion"] }]
     });
 
-    // 4️⃣ Buscar proyecto asociado a esa idea (si existe)
     let proyecto = null;
     if (idea) {
       proyecto = await Proyecto.findOne({
         where: { id_idea: idea.id_idea },
         include: [{ model: Estado, as: "Estado", attributes: ["descripcion"] }]
+
+
       });
     }
 
-    // 5️⃣ Determinar estados
     const estadoIdea = idea?.Estado?.descripcion || null;
     const estadoProyecto = proyecto?.Estado?.descripcion || null;
-
-    // 6️⃣ Retornar resultados
     return {
       tieneIdea: !!idea,
       idea: idea
@@ -979,8 +980,6 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
     throw new Error("Error al verificar idea y proyecto: " + error.message);
   }
 }
-
-
 
 async function obtenerUltimoHistorialPorIdea(id_idea) {
   try {
