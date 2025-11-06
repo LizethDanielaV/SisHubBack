@@ -677,9 +677,35 @@ export async function obtenerHistorialProyecto(id_proyecto) {
   }
 }
 
+async function obtenerEntregablePorIdCalificado(id_entregable) {
+    try {
+        console.log("Obteniendo entregable con ID:", id_entregable);
+        const entregable = await Entregable.findByPk(id_entregable, {
+            include: [
+                {
+                    model: Proyecto,
+                    include: [{
+                        model: Idea,
+                        as: 'Idea'
+                    }],
+                },
+                { model: Estado, attributes: ['id_estado', 'descripcion'],
+                    where: { descripcion: 'CALIFICADO' }},
+                { model: Actividad },
+                { model: Equipo }
+            ]
+        });
+
+        return entregable;
+    } catch (error) {
+        console.error("Error en servicio al obtener entregable:", error);
+        throw error;
+    }
+}
 
 export default {
     obtenerEntregablesPorProyectoYActividad,
+    obtenerEntregablePorIdCalificado,
     obtenerEntregablesPorProyecto,
     obtenerHistorialProyecto,
     deshabilitarEntregable,
