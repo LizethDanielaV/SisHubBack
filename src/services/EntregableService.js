@@ -421,6 +421,8 @@ async function actualizarEntregable(id_entregable, datosEntregable, codigo_usuar
         entregable.url_archivo = url_archivo;
         entregable.nombre_archivo = nombre_archivo;
         entregable.fecha_subida = new Date();
+        entregable.calificacion = null;
+        entregable.comentarios = null;
         await entregable.save({ transaction });
 
         const estadoRevision = await Estado.findOne({
