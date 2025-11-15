@@ -465,8 +465,10 @@ async function actualizarProyecto(idProyecto, datosActualizacion, codigo_usuario
 
 async function listarProyectosDirector() {
     try {
-        // 🔹 Obtener todos los proyectos con sus relaciones
         const proyectos = await Proyecto.findAll({
+            where: {
+                id_estado: { [Op.ne]: 13 } 
+            },
             include: [
                 {
                     model: TipoAlcance,
@@ -487,15 +489,15 @@ async function listarProyectosDirector() {
         const porcentajesPromises = proyectos.map(p =>
             calcularAvanceProyecto(p.id_proyecto).catch(error => {
                 console.error(`Error calculando porcentaje del proyecto ${p.id_proyecto}:`, error.message);
-                return 0; // Retorna 0 si hay error
+                return 0;
             })
         );
 
         const porcentajes = await Promise.all(porcentajesPromises);
 
-        // 🔹 Agregar el porcentaje directamente a cada instancia Sequelize
+        // 🔹 Agregar el porcentaje directamente a cada objeto
         const proyectosConPorcentaje = proyectos.map((proyecto, index) => {
-            const plainProyecto = proyecto.get({ plain: true }); // convierte a objeto JS plano
+            const plainProyecto = proyecto.get({ plain: true });
             return {
                 ...plainProyecto,
                 porcentaje: porcentajes[index]
@@ -508,7 +510,6 @@ async function listarProyectosDirector() {
         throw new Error("Error al obtener los proyectos del director: " + error.message);
     }
 }
-
 
 async function listarTodosProyectosDeUnEstudiante(codigoEstudiante) {
     try {
@@ -1085,8 +1086,6 @@ async function revisarProyecto(id_proyecto, accion, observacion, codigo_usuario)
         throw new Error("Error al revisar el proyecto: " + error.message);
     }
 }
-
-
 
 async function liberarProyecto(idProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -1786,10 +1785,16 @@ async function getWeeklyByLine() {
 
     proyectos.forEach(p => {
         const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
-        const line = p.linea_investigacion || "Sin línea";
+        const lines = (p.linea_investigacion || "")
+            .split(",")
+            .map(t => t.trim())
+            .filter(Boolean);
 
         grouped[week] ||= {};
-        grouped[week][line] = (grouped[week][line] || 0) + 1;
+
+        lines.forEach(line => {
+            grouped[week][line] = (grouped[week][line] || 0) + 1;
+        });
     });
 
     const rows = [];
@@ -1804,9 +1809,16 @@ async function getWeeklyByLine() {
     return rows;
 }
 
+
 async function getWeeklyByScope() {
     const proyectos = await Proyecto.findAll({
-        include: [{ model: TipoAlcance }],
+        include: [
+            { 
+                model: TipoAlcance,
+                as: "Tipo_alcance",
+                attributes: ["nombre"]
+            }
+        ],
         attributes: ["fecha_creacion"]
     });
 
@@ -1814,7 +1826,7 @@ async function getWeeklyByScope() {
 
     proyectos.forEach(p => {
         const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
-        const scope = p.TipoAlcance?.nombre || "Sin alcance";
+        const scope = p.Tipo_alcance?.nombre || "Sin alcance";
 
         grouped[week] ||= {};
         grouped[week][scope] = (grouped[week][scope] || 0) + 1;
