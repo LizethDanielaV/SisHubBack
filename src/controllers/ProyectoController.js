@@ -487,6 +487,15 @@ async function getWeeklyProjects(req, res) {
     }
   }
 
+export const createDataProject = async (req, res) => {
+    try {
+        const proyecto = await ProyectoService.createDataProject(req.body);
+        res.status(201).json(proyecto);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 
 export default {
     crearProyectoDesdeIdea,
@@ -514,5 +523,6 @@ export default {
     getWeeklyProjects,
     getWeeklyByLine,
     getWeeklyByScope,
-    getWeeklyByTech
+    getWeeklyByTech,
+    createDataProject
 };

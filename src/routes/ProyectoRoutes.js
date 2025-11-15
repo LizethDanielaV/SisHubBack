@@ -23,6 +23,7 @@ router.get("/listar/paraEstudiante/:codigo_estudiante", ProyectoController.lista
 router.get("/listar/paraDocente/:codigo_docente", ProyectoController.listarTodosProyectosDeUnProfesor);
 router.put("/revisar", /* verificarToken, verificarRol([2]), */ ProyectoController.revisarProyecto);
 router.get("/:id_proyecto/ultimo-historial", ProyectoController.obtenerUltimoHistorial);
+router.post("/data-project", ProyectoController.createDataProject);
 router.post("/crear/:id", verificarToken, ProyectoController.crearProyectoDesdeIdea);
 router.patch("/:id", /* verificarToken,  */ProyectoController.actualizarProyecto);
 router.put("/:id_idea/rechazar", ProyectoController.rechazarObservacion);
