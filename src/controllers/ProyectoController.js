@@ -451,36 +451,36 @@ async function calcularAvanceProyecto(req, res) {
   }
 }
 
-async function getWeeklyProjects(req, res) {
+async function getSemesterProjects(req, res) {
     try {
-      const data = await ProyectoService.getWeeklyProjects();
+      const data = await ProyectoService.getSemesterProjects();
       res.json(data);
     } catch (e) {
       res.status(500).json({ error: "Error obteniendo proyectos semanales" });
     }
   }
 
-  async function getWeeklyByLine(req, res) {
+  async function getSemesterByLine(req, res) {
     try {
-      const data = await ProyectoService.getWeeklyByLine();
+      const data = await ProyectoService.getSemesterByLine();
       res.json(data);
     } catch (e) {
       res.status(500).json({ error: "Error obteniendo proyectos por línea" });
     }
   }
 
-  async function getWeeklyByScope(req, res) {
+  async function getSemesterByScope(req, res) {
     try {
-      const data = await ProyectoService.getWeeklyByScope();
+      const data = await ProyectoService.getSemesterByScope();
       res.json(data);
     } catch (e) {
       res.status(500).json({ error: "Error obteniendo proyectos por alcance" });
     }
   }
 
- async function getWeeklyByTech(req, res) {
+ async function getSemesterByTech(req, res) {
     try {
-      const data = await ProyectoService.getWeeklyByTech();
+      const data = await ProyectoService.getSemesterByTech();
       res.json(data);
     } catch (e) {
       res.status(500).json({ error: "Error obteniendo proyectos por tecnología" });
@@ -520,9 +520,9 @@ export default {
     verDetalleProyecto, 
     generarHistorialProyecto, 
     calcularAvanceProyecto,
-    getWeeklyProjects,
-    getWeeklyByLine,
-    getWeeklyByScope,
-    getWeeklyByTech,
+    getSemesterProjects,
+    getSemesterByLine,
+    getSemesterByScope,
+    getSemesterByTech,
     createDataProject
 };

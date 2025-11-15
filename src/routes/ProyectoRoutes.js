@@ -10,10 +10,10 @@ const router = Router();
 router.get("/libres", ProyectoController.listarPropuestasLibres);
 
 // para forecast de proyectos no borrar 
-router.get("/weekly-projects", ProyectoController.getWeeklyProjects);
-router.get("/weekly-by-line", ProyectoController.getWeeklyByLine);
-router.get("/weekly-by-scope", ProyectoController.getWeeklyByScope);
-router.get("/weekly-by-tech", ProyectoController.getWeeklyByTech);
+router.get("/semester-projects", ProyectoController.getSemesterProjects);
+router.get("/semester-by-line", ProyectoController.getSemesterByLine);
+router.get("/semester-by-scope", ProyectoController.getSemesterByScope);
+router.get("/semester-by-tech", ProyectoController.getSemesterByTech);
 
 router.get("/listar/paraDirector", /* verificarToken, */ ProyectoController.listarParaDirector);
 router.get("/listar/porGrupo", ProyectoController.listarTodosProyectosDeUnGrupo);
