@@ -833,6 +833,31 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
     }
 }
 
+export async function createDataProject(data) {
+    try {
+        const {
+            fecha_creacion,
+            linea_investigacion,
+            tecnologias,
+            id_tipo_alcance
+        } = data;
+
+        const nuevoProyecto = await Proyecto.create({
+            fecha_creacion: fecha_creacion, 
+            linea_investigacion: linea_investigacion || null,
+            tecnologias: tecnologias || null,
+            id_tipo_alcance: id_tipo_alcance || null,
+            palabras_clave: null, 
+            id_idea: null,      
+            id_estado: null 
+        });
+
+        return nuevoProyecto;
+
+    } catch (error) {
+        throw new Error("Error al crear el proyecto: " + error.message);
+    }
+}
 
 async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
     const transaction = await db.transaction();
@@ -1900,5 +1925,6 @@ export default {
     getWeeklyProjects,
     getWeeklyByLine,
     getWeeklyByScope,
-    getWeeklyByTech
+    getWeeklyByTech,
+    createDataProject
 };
