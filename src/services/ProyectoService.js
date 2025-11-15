@@ -1782,8 +1782,34 @@ async function obtenerUltimoHistorialPorProyecto(id_proyecto) {
         throw new Error("Error al obtener el último historial: " + error.message);
     }
 }
+function getSemester(dateStr) {
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
 
-async function getWeeklyProjects() {
+    // Primer semestre: Feb 10 → Jun 10
+    if (
+        (month > 2 && month < 6) ||
+        (month === 2 && day >= 10) ||
+        (month === 6 && day <= 10)
+    ) {
+        return `${year}-1`;
+    }
+
+    // Segundo semestre: Ago 10 → Dic 10
+    if (
+        (month > 8 && month < 12) ||
+        (month === 8 && day >= 10) ||
+        (month === 12 && day <= 10)
+    ) {
+        return `${year}-2`;
+    }
+
+    return null; 
+}
+
+async function getSemesterProjects() {
     const proyectos = await Proyecto.findAll({
         attributes: ["fecha_creacion"]
     });
@@ -1791,17 +1817,20 @@ async function getWeeklyProjects() {
     const grouped = {};
 
     proyectos.forEach(p => {
-        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
-        grouped[week] = (grouped[week] || 0) + 1;
+        const semester = getSemester(p.fecha_creacion);
+        if (!semester) return;
+
+        grouped[semester] = (grouped[semester] || 0) + 1;
     });
 
-    return Object.entries(grouped).map(([week, total]) => ({
-        week,
+    return Object.entries(grouped).map(([semester, total]) => ({
+        week: semester, // 👈 Mantengo tu estructura
         total
     }));
 }
 
-async function getWeeklyByLine() {
+
+async function getSemesterByLine() {
     const proyectos = await Proyecto.findAll({
         attributes: ["fecha_creacion", "linea_investigacion"]
     });
@@ -1809,23 +1838,25 @@ async function getWeeklyByLine() {
     const grouped = {};
 
     proyectos.forEach(p => {
-        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        const semester = getSemester(p.fecha_creacion);
+        if (!semester) return;
+
         const lines = (p.linea_investigacion || "")
             .split(",")
             .map(t => t.trim())
             .filter(Boolean);
 
-        grouped[week] ||= {};
+        grouped[semester] ||= {};
 
         lines.forEach(line => {
-            grouped[week][line] = (grouped[week][line] || 0) + 1;
+            grouped[semester][line] = (grouped[semester][line] || 0) + 1;
         });
     });
 
     const rows = [];
-    for (const week in grouped) {
-        const row = { week };
-        Object.entries(grouped[week]).forEach(([line, count]) => {
+    for (const semester in grouped) {
+        const row = { week: semester }; // 👈 Mantengo tu clave "week"
+        Object.entries(grouped[semester]).forEach(([line, count]) => {
             row[line] = count;
         });
         rows.push(row);
@@ -1835,10 +1866,11 @@ async function getWeeklyByLine() {
 }
 
 
-async function getWeeklyByScope() {
+
+async function getSemesterByScope() {
     const proyectos = await Proyecto.findAll({
         include: [
-            { 
+            {
                 model: TipoAlcance,
                 as: "Tipo_alcance",
                 attributes: ["nombre"]
@@ -1850,17 +1882,19 @@ async function getWeeklyByScope() {
     const grouped = {};
 
     proyectos.forEach(p => {
-        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        const semester = getSemester(p.fecha_creacion);
+        if (!semester) return;
+
         const scope = p.Tipo_alcance?.nombre || "Sin alcance";
 
-        grouped[week] ||= {};
-        grouped[week][scope] = (grouped[week][scope] || 0) + 1;
+        grouped[semester] ||= {};
+        grouped[semester][scope] = (grouped[semester][scope] || 0) + 1;
     });
 
     const rows = [];
-    for (const week in grouped) {
-        const row = { week };
-        Object.entries(grouped[week]).forEach(([scope, count]) => {
+    for (const semester in grouped) {
+        const row = { week: semester }; // 👈 Mantengo tu estructura
+        Object.entries(grouped[semester]).forEach(([scope, count]) => {
             row[scope] = count;
         });
         rows.push(row);
@@ -1869,7 +1903,10 @@ async function getWeeklyByScope() {
     return rows;
 }
 
-async function getWeeklyByTech() {
+
+
+
+async function getSemesterByTech() {
     const proyectos = await Proyecto.findAll({
         attributes: ["fecha_creacion", "tecnologias"]
     });
@@ -1877,23 +1914,25 @@ async function getWeeklyByTech() {
     const grouped = {};
 
     proyectos.forEach(p => {
-        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        const semester = getSemester(p.fecha_creacion);
+        if (!semester) return;
+
         const techs = (p.tecnologias || "")
             .split(",")
             .map(t => t.trim())
             .filter(Boolean);
 
-        grouped[week] ||= {};
+        grouped[semester] ||= {};
 
         techs.forEach(tech => {
-            grouped[week][tech] = (grouped[week][tech] || 0) + 1;
+            grouped[semester][tech] = (grouped[semester][tech] || 0) + 1;
         });
     });
 
     const rows = [];
-    for (const week in grouped) {
-        const row = { week };
-        Object.entries(grouped[week]).forEach(([tech, count]) => {
+    for (const semester in grouped) {
+        const row = { week: semester }; // 👈 igual que tus otras funciones
+        Object.entries(grouped[semester]).forEach(([tech, count]) => {
             row[tech] = count;
         });
         rows.push(row);
@@ -1901,6 +1940,7 @@ async function getWeeklyByTech() {
 
     return rows;
 }
+
 
 export default {
     crearProyectoDesdeIdea,
@@ -1922,9 +1962,9 @@ export default {
     obtenerUltimoHistorialPorProyecto,
     calcularAvanceProyecto,
     rechazarObservacion,
-    getWeeklyProjects,
-    getWeeklyByLine,
-    getWeeklyByScope,
-    getWeeklyByTech,
+    getSemesterProjects,
+    getSemesterByLine,
+    getSemesterByScope,
+    getSemesterByTech,
     createDataProject
 };
