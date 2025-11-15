@@ -450,6 +450,44 @@ async function calcularAvanceProyecto(req, res) {
       .json({ message: "Error al obtener materias", error: error.message });
   }
 }
+
+async function getWeeklyProjects(req, res) {
+    try {
+      const data = await ProyectoService.getWeeklyProjects();
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({ error: "Error obteniendo proyectos semanales" });
+    }
+  }
+
+  async function getWeeklyByLine(req, res) {
+    try {
+      const data = await ProyectoService.getWeeklyByLine();
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({ error: "Error obteniendo proyectos por línea" });
+    }
+  }
+
+  async function getWeeklyByScope(req, res) {
+    try {
+      const data = await ProyectoService.getWeeklyByScope();
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({ error: "Error obteniendo proyectos por alcance" });
+    }
+  }
+
+ async function getWeeklyByTech(req, res) {
+    try {
+      const data = await ProyectoService.getWeeklyByTech();
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({ error: "Error obteniendo proyectos por tecnología" });
+    }
+  }
+
+
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
@@ -472,5 +510,9 @@ export default {
     continuarProyecto, 
     verDetalleProyecto, 
     generarHistorialProyecto, 
-    calcularAvanceProyecto
+    calcularAvanceProyecto,
+    getWeeklyProjects,
+    getWeeklyByLine,
+    getWeeklyByScope,
+    getWeeklyByTech
 };

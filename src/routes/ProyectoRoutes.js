@@ -8,6 +8,13 @@ const router = Router();
 
 /*router.get("/grupo/listar", verificarToken, ProyectoController.listarProyectosPorGrupo);*/
 router.get("/libres", ProyectoController.listarPropuestasLibres);
+
+// para forecast de proyectos no borrar 
+router.get("/weekly-projects", ProyectoController.getWeeklyProjects);
+router.get("/weekly-by-line", ProyectoController.getWeeklyByLine);
+router.get("/weekly-by-scope", ProyectoController.getWeeklyByScope);
+router.get("/weekly-by-tech", ProyectoController.getWeeklyByTech);
+
 router.get("/listar/paraDirector", /* verificarToken, */ ProyectoController.listarParaDirector);
 router.get("/listar/porGrupo", ProyectoController.listarTodosProyectosDeUnGrupo);
 router.get("/:id", /* verificarToken, */ ProyectoController.obtenerProyecto);
@@ -29,4 +36,6 @@ router.patch("/:id", /* verificarToken,  */ProyectoController.actualizarProyecto
 router.get("/verDetalle/:id_proyecto", ProyectoController.verDetalleProyecto);
 router.get("/historial/:id_proyecto", ProyectoController.generarHistorialProyecto);
 router.get("/avance/:id_proyecto", ProyectoController.calcularAvanceProyecto);
+
+
 export default router;
