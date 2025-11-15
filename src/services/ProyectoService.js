@@ -698,7 +698,7 @@ async function listarTodosProyectosDeUnProfesor(codigoProfesor) {
         });
 
         // Calcular porcentajes en paralelo para mejor rendimiento
-        const porcentajesPromises = proyectos.map(p => 
+        const porcentajesPromises = proyectos.map(p =>
             calcularAvanceProyecto(p.id_proyecto).catch(error => {
                 console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
                 return 0; // Retornar 0 si hay error
@@ -794,8 +794,8 @@ async function listarTodosProyectosDeUnGrupo(codigoMateria, nombre, periodo, ani
                 }
             ]
         });
-         // Calcular porcentajes en paralelo para mejor rendimiento
-        const porcentajesPromises = proyectos.map(p => 
+        // Calcular porcentajes en paralelo para mejor rendimiento
+        const porcentajesPromises = proyectos.map(p =>
             calcularAvanceProyecto(p.id_proyecto).catch(error => {
                 console.error(`Error calculando porcentaje proyecto ${p.id_proyecto}:`, error.message);
                 return 0; // Retornar 0 si hay error
@@ -1285,14 +1285,14 @@ async function rechazarObservacion(id_idea, id_proyecto, codigo_usuario) {
                 nuevoEstadoIdea = estadoLibre;
             }
             mensaje = "Proyecto rechazado. Pasó de SELECCIONADO a CALIFICADO. La idea quedó LIBRE.";
-        } 
+        }
         else if (proyecto.id_estado === estadoCalificado.id_estado) {
             nuevoEstadoProyecto = estadoCalificado; // se mantiene
             if (idea.id_estado === estadoStandBy.id_estado) {
                 nuevoEstadoIdea = estadoAprobado;
             }
             mensaje = "Proyecto rechazado (mantiene estado CALIFICADO). La idea pasó a APROBADO.";
-        } 
+        }
         else {
             mensaje = "El proyecto no se encontraba en un estado válido para rechazo.";
         }
@@ -1731,32 +1731,138 @@ async function calcularAvanceProyecto(idProyecto) {
 }
 
 async function obtenerUltimoHistorialPorProyecto(id_proyecto) {
-  try {
-    const historial = await HistorialProyecto.findOne({
-      where: { id_proyecto },
-      include: [
-        {
-          model: Estado,
-          as: "Estado",
-          attributes: ["descripcion"]
-        },
-        {
-          model: Usuario,
-          as: "Usuario",
-          attributes: ["codigo", "nombre"]
+    try {
+        const historial = await HistorialProyecto.findOne({
+            where: { id_proyecto },
+            include: [
+                {
+                    model: Estado,
+                    as: "Estado",
+                    attributes: ["descripcion"]
+                },
+                {
+                    model: Usuario,
+                    as: "Usuario",
+                    attributes: ["codigo", "nombre"]
+                }
+            ],
+            order: [["fecha", "DESC"]]
+        });
+
+        if (!historial) {
+            throw new Error("No hay historial registrado para esta idea");
         }
-      ],
-      order: [["fecha", "DESC"]]
+
+        return historial;
+    } catch (error) {
+        throw new Error("Error al obtener el último historial: " + error.message);
+    }
+}
+
+async function getWeeklyProjects() {
+    const proyectos = await Proyecto.findAll({
+        attributes: ["fecha_creacion"]
     });
 
-    if (!historial) {
-      throw new Error("No hay historial registrado para esta idea");
+    const grouped = {};
+
+    proyectos.forEach(p => {
+        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        grouped[week] = (grouped[week] || 0) + 1;
+    });
+
+    return Object.entries(grouped).map(([week, total]) => ({
+        week,
+        total
+    }));
+}
+
+async function getWeeklyByLine() {
+    const proyectos = await Proyecto.findAll({
+        attributes: ["fecha_creacion", "linea_investigacion"]
+    });
+
+    const grouped = {};
+
+    proyectos.forEach(p => {
+        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        const line = p.linea_investigacion || "Sin línea";
+
+        grouped[week] ||= {};
+        grouped[week][line] = (grouped[week][line] || 0) + 1;
+    });
+
+    const rows = [];
+    for (const week in grouped) {
+        const row = { week };
+        Object.entries(grouped[week]).forEach(([line, count]) => {
+            row[line] = count;
+        });
+        rows.push(row);
     }
 
-    return historial;
-  } catch (error) {
-    throw new Error("Error al obtener el último historial: " + error.message);
-  }
+    return rows;
+}
+
+async function getWeeklyByScope() {
+    const proyectos = await Proyecto.findAll({
+        include: [{ model: TipoAlcance }],
+        attributes: ["fecha_creacion"]
+    });
+
+    const grouped = {};
+
+    proyectos.forEach(p => {
+        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        const scope = p.TipoAlcance?.nombre || "Sin alcance";
+
+        grouped[week] ||= {};
+        grouped[week][scope] = (grouped[week][scope] || 0) + 1;
+    });
+
+    const rows = [];
+    for (const week in grouped) {
+        const row = { week };
+        Object.entries(grouped[week]).forEach(([scope, count]) => {
+            row[scope] = count;
+        });
+        rows.push(row);
+    }
+
+    return rows;
+}
+
+async function getWeeklyByTech() {
+    const proyectos = await Proyecto.findAll({
+        attributes: ["fecha_creacion", "tecnologias"]
+    });
+
+    const grouped = {};
+
+    proyectos.forEach(p => {
+        const week = new Date(p.fecha_creacion).toISOString().slice(0, 10);
+        const techs = (p.tecnologias || "")
+            .split(",")
+            .map(t => t.trim())
+            .filter(Boolean);
+
+        grouped[week] ||= {};
+
+        techs.forEach(tech => {
+            grouped[week][tech] = (grouped[week][tech] || 0) + 1;
+        });
+    });
+
+    const rows = [];
+    for (const week in grouped) {
+        const row = { week };
+        Object.entries(grouped[week]).forEach(([tech, count]) => {
+            row[tech] = count;
+        });
+        rows.push(row);
+    }
+
+    return rows;
 }
 
 export default {
@@ -1778,5 +1884,9 @@ export default {
     generarHistorialProyecto,
     obtenerUltimoHistorialPorProyecto,
     calcularAvanceProyecto,
-    rechazarObservacion
+    rechazarObservacion,
+    getWeeklyProjects,
+    getWeeklyByLine,
+    getWeeklyByScope,
+    getWeeklyByTech
 };
