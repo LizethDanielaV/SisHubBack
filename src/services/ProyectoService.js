@@ -1824,11 +1824,10 @@ async function getSemesterProjects() {
     });
 
     return Object.entries(grouped).map(([semester, total]) => ({
-        week: semester, // 👈 Mantengo tu estructura
+        semester: semester, 
         total
     }));
 }
-
 
 async function getSemesterByLine() {
     const proyectos = await Proyecto.findAll({
@@ -1855,7 +1854,7 @@ async function getSemesterByLine() {
 
     const rows = [];
     for (const semester in grouped) {
-        const row = { week: semester }; // 👈 Mantengo tu clave "week"
+        const row = { semester: semester }; 
         Object.entries(grouped[semester]).forEach(([line, count]) => {
             row[line] = count;
         });
@@ -1864,8 +1863,6 @@ async function getSemesterByLine() {
 
     return rows;
 }
-
-
 
 async function getSemesterByScope() {
     const proyectos = await Proyecto.findAll({
@@ -1893,7 +1890,7 @@ async function getSemesterByScope() {
 
     const rows = [];
     for (const semester in grouped) {
-        const row = { week: semester }; // 👈 Mantengo tu estructura
+        const row = { semester: semester };
         Object.entries(grouped[semester]).forEach(([scope, count]) => {
             row[scope] = count;
         });
@@ -1902,9 +1899,6 @@ async function getSemesterByScope() {
 
     return rows;
 }
-
-
-
 
 async function getSemesterByTech() {
     const proyectos = await Proyecto.findAll({
@@ -1931,7 +1925,7 @@ async function getSemesterByTech() {
 
     const rows = [];
     for (const semester in grouped) {
-        const row = { week: semester }; // 👈 igual que tus otras funciones
+        const row = { semester: semester }; 
         Object.entries(grouped[semester]).forEach(([tech, count]) => {
             row[tech] = count;
         });
