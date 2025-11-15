@@ -849,7 +849,7 @@ export async function createDataProject(data) {
             id_tipo_alcance: id_tipo_alcance || null,
             palabras_clave: null, 
             id_idea: null,      
-            id_estado: null 
+            id_estado: 13 
         });
 
         return nuevoProyecto;
