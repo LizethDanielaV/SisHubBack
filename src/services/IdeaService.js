@@ -9,7 +9,7 @@ import Actividad from "../models/Actividad.js";
 import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import HistorialIdea from "../models/HistorialIdea.js";
 import db from "../db/db.js";
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 
 async function crearIdea(datosIdea) {
     const transaction = await db.transaction();
@@ -668,23 +668,16 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
 
 async function listarIdeasPorGrupo(datosGrupo) {
   try {
-    // 🔹 Obtener los id_idea que ya tienen proyecto
-    const ideasConProyecto = await Proyecto.findAll({
-      attributes: ["id_idea"],
-      raw: true,
-    });
-
-    const idsConProyecto = ideasConProyecto.map((p) => p.id_idea);
-
-    // 🔹 Traer solo las ideas del grupo que no estén en esa lista
     const ideas = await Idea.findAll({
-      where: {
-        codigo_materia: datosGrupo.codigo_materia,
-        nombre: datosGrupo.nombre,
-        periodo: datosGrupo.periodo,
-        anio: datosGrupo.anio,
-        id_idea: { [Op.notIn]: idsConProyecto },
-      },
+      attributes: [
+        "id_idea",
+        "titulo",
+        "objetivo_general",
+        "codigo_materia",
+        "nombre",
+        "periodo",
+        "anio",
+      ],
       include: [
         {
           model: Estado,
@@ -697,11 +690,25 @@ async function listarIdeasPorGrupo(datosGrupo) {
           attributes: ["codigo", "nombre", "correo"],
         },
       ],
+      where: {
+        codigo_materia: datosGrupo.codigo_materia,
+        nombre: datosGrupo.nombre,
+        periodo: datosGrupo.periodo,
+        anio: datosGrupo.anio,
+        // 🔥 aquí está la magia → NOT EXISTS exacto al SQL
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT EXISTS (
+              SELECT 1 FROM proyecto p 
+              WHERE p.id_idea = Idea.id_idea
+            )
+          `),
+        ],
+      },
       order: [["id_idea", "DESC"]],
     });
 
-    // 🔁 Formatear salida con estado fuera del objeto
-    const resultado = ideas.map((idea) => ({
+    return ideas.map((idea) => ({
       id_idea: idea.id_idea,
       titulo: idea.titulo,
       objetivo_general: idea.objetivo_general,
@@ -709,16 +716,17 @@ async function listarIdeasPorGrupo(datosGrupo) {
       nombre: idea.nombre,
       periodo: idea.periodo,
       anio: idea.anio,
-      estado: idea.Estado?.descripcion || null, 
-      Usuario: idea.Usuario, 
+      estado: idea.Estado?.descripcion || null,
+      usuario_codigo: idea.Usuario?.codigo || null,
+      usuario_nombre: idea.Usuario?.nombre || null,
+      usuario_correo: idea.Usuario?.correo || null,
     }));
-
-    return resultado;
   } catch (error) {
     console.error("Error al listar ideas por grupo:", error);
     throw new Error("No fue posible listar las ideas del grupo sin proyecto");
   }
 }
+
 
 
 async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
