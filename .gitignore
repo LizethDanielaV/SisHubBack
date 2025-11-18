@@ -1,4 +1,7 @@
 # Logs
+serviceAccountKey.json
+
+
 logs
 *.log
 npm-debug.log*
@@ -17,7 +20,6 @@ dist-ssr
 .env
 .env.local
 .env.*.local
-serviceAccountKey.json
 serviceAccountKey.json
 *.json
 # Editor directories and files
