@@ -533,16 +533,17 @@ async function exportarProyectosExcel(req, res) {
 
     // Crear columnas base
     const columnas = [
+      { header: "Grupo", key: "grupo", width: 25 },
+      { header: "Equipo", key: "equipo", width: 40 },
       { header: "Título", key: "titulo", width: 30 },
       { header: "Problema", key: "problema", width: 30 },
+      { header: "Justificación", key: "justificacion", width: 30 },
       { header: "Objetivo General", key: "objetivo_general", width: 30 },
       { header: "Objetivos Específicos", key: "objetivos_especificos", width: 30 },
       { header: "Línea de Investigación", key: "linea_investigacion", width: 25 },
       { header: "Tecnologías", key: "tecnologias", width: 25 },
       { header: "Palabras Clave", key: "palabras_clave", width: 25 },
       { header: "Tipo de Alcance", key: "tipo_alcance", width: 20 },
-      { header: "Grupo", key: "grupo", width: 25 },
-      { header: "Equipo", key: "equipo", width: 40 },
     ];
 
     // Agregar columnas dinámicas para URL₁, URL₂, URL₃...
@@ -639,77 +640,82 @@ async function exportarProyectosPDF(req, res) {
     ];
 
     data.forEach((row, index) => {
-      contenido.push(
-        // ==========================================
-        // CARD / BLOQUE DEL PROYECTO
-        // ==========================================
-        {
-          style: "card",
-          margin: [0, 0, 0, 20],
-          table: {
-            widths: ["100%"],
-            body: [
-              [
-                {
-                  stack: [
-                    {
-                      text: `Proyecto #${index + 1}`,
-                      style: "cardTitulo"
-                    },
+      contenido.push({
+        style: "card",
+        margin: [0, 0, 0, 20],
+        table: {
+          widths: ["100%"],
+          body: [
+            [
+              {
+                stack: [
+                  { text: `Proyecto #${index + 1}`, style: "cardTitulo" },
 
-                    { text: "\nTítulo:", style: "campo" },
-                    { text: row.titulo, style: "valor" },
+                  {
+                    columns: [
+                      // COLUMNA 1
+                      [
+                        { text: "Grupo:", style: "campo" },
+                        { text: row.grupo, style: "valor" },
 
-                    { text: "\nProblema:", style: "campo" },
-                    { text: row.problema, style: "valor" },
+                        { text: "\nEquipo:", style: "campo" },
+                        { text: row.equipo, style: "valor" },
 
-                    { text: "\nObjetivo General:", style: "campo" },
-                    { text: row.objetivo_general, style: "valor" },
+                        { text: "\nTítulo:", style: "campo" },
+                        { text: row.titulo, style: "valor" },
 
-                    { text: "\nObjetivos Específicos:", style: "campo" },
-                    { text: row.objetivos_especificos, style: "valor" },
+                        { text: "\nProblema:", style: "campo" },
+                        { text: row.problema, style: "valor" },
 
-                    { text: "\nLínea de Investigación:", style: "campo" },
-                    { text: row.linea_investigacion, style: "valor" },
+                        { text: "\nJustificación:", style: "campo" },
+                        { text: row.justificacion, style: "valor" },
+                      ],
 
-                    { text: "\nTecnologías:", style: "campo" },
-                    { text: row.tecnologias, style: "valor" },
+                      // COLUMNA 2
+                      [
+                        { text: "Objetivo General:", style: "campo" },
+                        { text: row.objetivo_general, style: "valor" },
 
-                    { text: "\nTipo de Alcance:", style: "campo" },
-                    { text: row.tipo_alcance, style: "valor" },
+                        { text: "\nObjetivos Específicos:", style: "campo" },
+                        { text: row.objetivos_especificos, style: "valor" },
 
-                    { text: "\nGrupo:", style: "campo" },
-                    { text: row.grupo, style: "valor" },
+                        { text: "\nLínea de Investigación:", style: "campo" },
+                        { text: row.linea_investigacion, style: "valor" },
 
-                    { text: "\nEquipo:", style: "campo" },
-                    { text: row.equipo, style: "valor" },
+                        { text: "\nTecnologías:", style: "campo" },
+                        { text: row.tecnologias, style: "valor" },
 
-                    { text: "\nEntregables:", style: "campo" },
-                    ...row.urls_entregables.map((u, i) => ({
-                      text: `• Entregable ${i + 1}: ${u}`,
-                      style: "valor"
-                    })),
+                        { text: "\nTipo de Alcance:", style: "campo" },
+                        { text: row.tipo_alcance, style: "valor" },
 
-                    { text: "\nFechas de subida:", style: "campo" },
-                    {
-                      text: row.fechas_subida.join(" | "),
-                      style: "valor"
-                    }
-                  ]
-                }
-              ]
+                        { text: "\nEntregables:", style: "campo" },
+                        ...row.urls_entregables.map((u, i) => ({
+                          text: `• Entregable ${i + 1}: ${u}`,
+                          style: "valor"
+                        })),
+
+                        { text: "\nFechas de subida:", style: "campo" },
+                        {
+                          text: row.fechas_subida.join(" | "),
+                          style: "valor"
+                        }
+                      ]
+                    ]
+                  }
+                ]
+              }
             ]
-          },
-          layout: {
-            paddingLeft: () => 10,
-            paddingRight: () => 10,
-            paddingTop: () => 10,
-            paddingBottom: () => 10,
-            hLineColor: () => "#cccccc",
-            vLineColor: () => "#cccccc"
-          }
+          ]
+        },
+        layout: {
+          paddingLeft: () => 10,
+          paddingRight: () => 10,
+          paddingTop: () => 10,
+          paddingBottom: () => 10,
+          hLineColor: () => "#cccccc",
+          vLineColor: () => "#cccccc"
         }
-      );
+      });
     });
 
     // ================================
@@ -765,6 +771,7 @@ async function exportarProyectosPDF(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
 
 
 export default {

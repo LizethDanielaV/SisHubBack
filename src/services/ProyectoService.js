@@ -2019,6 +2019,7 @@ async function exportarProyectos({ tipo, fechaInicio, fechaFin, anio, periodo })
                 mapa.set(key, {
                     titulo: idea?.titulo || "",
                     problema: idea?.problema || "",
+                    justificacion: idea?.justificacion || "",
                     objetivo_general: idea?.objetivo_general || "",
                     objetivos_especificos: idea?.objetivos_especificos || "",
                     linea_investigacion: proyecto?.linea_investigacion || "",
