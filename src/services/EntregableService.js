@@ -39,7 +39,11 @@ async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad
                 id_actividad
             },
             include: [
+<<<<<<< HEAD
                 { model: Estado, attributes: ['id_estado', 'descripcion'], where: { descripcion: 'CALIFICADO' } },
+=======
+                { model: Estado, attributes: ['id_estado', 'descripcion'] },
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
                 { model: Actividad, attributes: ['id_actividad', 'titulo'] },
                 { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
                 { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
@@ -54,6 +58,32 @@ async function obtenerEntregablesPorProyectoYActividad(id_proyecto, id_actividad
     }
 }
 
+<<<<<<< HEAD
+=======
+
+
+async function obtenerEntregablesPorProyecto(id_proyecto) {
+    try {
+        const entregables = await Entregable.findAll({
+            where: {
+                id_proyecto,
+            },
+            include: [
+                { model: Estado, attributes: ['id_estado', 'descripcion'] },
+                { model: Proyecto, attributes: ['id_proyecto', 'linea_investigacion'] },
+                { model: Equipo, attributes: ['id_equipo', 'descripcion'] }
+            ],
+            order: [['fecha_subida', 'DESC']] 
+        });
+
+        return entregables || [];
+    } catch (error) {
+        console.error("Error en servicio al obtener entregables:", error);
+        throw error;
+    }
+}
+
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 async function obtenerEntregablePorId(id_entregable) {
     try {
         const entregable = await Entregable.findByPk(id_entregable, {
@@ -398,6 +428,11 @@ async function actualizarEntregable(id_entregable, datosEntregable, codigo_usuar
         entregable.url_archivo = url_archivo;
         entregable.nombre_archivo = nombre_archivo;
         entregable.fecha_subida = new Date();
+<<<<<<< HEAD
+=======
+        entregable.calificacion = null;
+        entregable.comentarios = null;
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         await entregable.save({ transaction });
 
         const estadoRevision = await Estado.findOne({
@@ -654,9 +689,42 @@ export async function obtenerHistorialProyecto(id_proyecto) {
   }
 }
 
+<<<<<<< HEAD
 
 export default {
     obtenerEntregablesPorProyectoYActividad,
+=======
+async function obtenerEntregablePorIdCalificado(id_entregable) {
+    try {
+        console.log("Obteniendo entregable con ID:", id_entregable);
+        const entregable = await Entregable.findByPk(id_entregable, {
+            include: [
+                {
+                    model: Proyecto,
+                    include: [{
+                        model: Idea,
+                        as: 'Idea'
+                    }],
+                },
+                { model: Estado, attributes: ['id_estado', 'descripcion'],
+                    where: { descripcion: 'CALIFICADO' }},
+                { model: Actividad },
+                { model: Equipo }
+            ]
+        });
+
+        return entregable;
+    } catch (error) {
+        console.error("Error en servicio al obtener entregable:", error);
+        throw error;
+    }
+}
+
+export default {
+    obtenerEntregablesPorProyectoYActividad,
+    obtenerEntregablePorIdCalificado,
+    obtenerEntregablesPorProyecto,
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     obtenerHistorialProyecto,
     deshabilitarEntregable,
     obtenerEntregablePorId,
@@ -666,4 +734,8 @@ export default {
     enviarProyectoARevision,
     retroalimentarEntregable,
     TIPOS_ENTREGABLE
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc

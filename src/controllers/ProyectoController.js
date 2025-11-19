@@ -1,4 +1,5 @@
 import ProyectoService from "../services/ProyectoService.js";
+<<<<<<< HEAD
 
 async function crearProyectoDesdeIdea(req, res) {
     try {
@@ -114,6 +115,126 @@ async function obtenerProyecto(req, res) {
             error: "Error al obtener el proyecto"
         });
     }
+=======
+import ExcelJS from "exceljs";
+import PdfPrinter from "pdfmake";
+import path from "path";
+
+async function crearProyectoDesdeIdea(req, res) {
+  try {
+    const idIdea = parseInt(req.params.id);
+    const datosProyecto = req.body;
+    const { codigo_usuario } = req.body; // ← Obtener del body
+
+    if (isNaN(idIdea)) {
+      return res.status(400).json({
+        error: "ID de idea inválido"
+      });
+    }
+
+    // Validar que venga el código de usuario
+    if (!codigo_usuario || codigo_usuario.trim().length === 0) {
+      return res.status(400).json({
+        error: "El código de usuario es obligatorio"
+      });
+    }
+
+    const { linea_investigacion, tecnologias, palabras_clave } = datosProyecto;
+
+    // Validaciones
+    if (!linea_investigacion || linea_investigacion.trim().length === 0) {
+      return res.status(400).json({
+        error: "La línea de investigación es obligatoria"
+      });
+    }
+
+    if (linea_investigacion.length > 150) {
+      return res.status(400).json({
+        error: "La línea de investigación no puede exceder 150 caracteres"
+      });
+    }
+
+    if (tecnologias && tecnologias.length > 150) {
+      return res.status(400).json({
+        error: "Las tecnologías no pueden exceder 150 caracteres"
+      });
+    }
+
+    if (palabras_clave && palabras_clave.length > 150) {
+      return res.status(400).json({
+        error: "Las palabras clave no pueden exceder 150 caracteres"
+      });
+    }
+
+    const proyectoCreado = await ProyectoService.crearProyectoDesdeIdea(
+      idIdea,
+      datosProyecto,
+      codigo_usuario
+    );
+
+    return res.status(201).json({
+      mensaje: "Proyecto creado exitosamente a partir de la idea aprobada",
+      data: proyectoCreado
+    });
+
+  } catch (error) {
+    console.error("Error al crear proyecto:", error);
+    return res.status(400).json({
+      error: error.message || "Error al crear el proyecto"
+    });
+  }
+}
+
+async function rechazarObservacion(req, res) {
+  const { id_idea } = req.params;
+  const { codigo_usuario, id_proyecto } = req.body;
+
+  try {
+    const result = await ProyectoService.rechazarObservacion(id_idea, id_proyecto, codigo_usuario);
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      idea: result.idea,
+    });
+  } catch (error) {
+    console.error("Error en revisar idea:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al revisar la idea",
+    });
+  }
+}
+
+async function obtenerProyecto(req, res) {
+  try {
+    const idProyecto = parseInt(req.params.id);
+
+    if (isNaN(idProyecto)) {
+      return res.status(400).json({
+        error: "ID de proyecto inválido"
+      });
+    }
+
+    const proyecto = await ProyectoService.obtenerProyectoPorId(idProyecto);
+
+    return res.status(200).json({
+      data: proyecto
+    });
+
+  } catch (error) {
+    console.error("Error al obtener proyecto:", error);
+
+    if (error.message === "Proyecto no encontrado") {
+      return res.status(404).json({
+        error: error.message
+      });
+    }
+
+    return res.status(500).json({
+      error: "Error al obtener el proyecto"
+    });
+  }
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 }
 /*
 async function listarProyectosPorGrupo(req, res) {
@@ -157,6 +278,7 @@ async function listarProyectosPorGrupo(req, res) {
 */
 
 async function actualizarProyecto(req, res) {
+<<<<<<< HEAD
     try {
         const idProyecto = parseInt(req.params.id);
         const datosActualizacion = req.body;
@@ -220,6 +342,71 @@ async function actualizarProyecto(req, res) {
             error: error.message || "Error al actualizar el proyecto"
         });
     }
+=======
+  try {
+    const idProyecto = parseInt(req.params.id);
+    const datosActualizacion = req.body;
+    const { codigo_usuario } = req.body; // ← Del body también
+
+    if (isNaN(idProyecto)) {
+      return res.status(400).json({
+        error: "ID de proyecto inválido"
+      });
+    }
+
+    // Validar que venga el código de usuario
+    if (!codigo_usuario || codigo_usuario.trim().length === 0) {
+      return res.status(400).json({
+        error: "El código de usuario es obligatorio"
+      });
+    }
+
+    const { linea_investigacion, tecnologias, palabras_clave } = datosActualizacion;
+
+    // Validar que al menos un campo esté presente (además de codigo_usuario)
+    if (!linea_investigacion && !tecnologias && !palabras_clave) {
+      return res.status(400).json({
+        error: "Debe proporcionar al menos un campo para actualizar"
+      });
+    }
+
+    // Validar longitudes
+    if (linea_investigacion && linea_investigacion.length > 150) {
+      return res.status(400).json({
+        error: "La línea de investigación no puede exceder 150 caracteres"
+      });
+    }
+
+    if (tecnologias && tecnologias.length > 150) {
+      return res.status(400).json({
+        error: "Las tecnologías no pueden exceder 150 caracteres"
+      });
+    }
+
+    if (palabras_clave && palabras_clave.length > 150) {
+      return res.status(400).json({
+        error: "Las palabras clave no pueden exceder 150 caracteres"
+      });
+    }
+
+    const proyectoActualizado = await ProyectoService.actualizarProyecto(
+      idProyecto,
+      datosActualizacion,
+      codigo_usuario
+    );
+
+    return res.status(200).json({
+      mensaje: "Proyecto actualizado exitosamente",
+      data: proyectoActualizado
+    });
+
+  } catch (error) {
+    console.error("Error al actualizar proyecto:", error);
+    return res.status(400).json({
+      error: error.message || "Error al actualizar el proyecto"
+    });
+  }
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 }
 
 const calificarProyecto = async (req, res) => {
@@ -304,10 +491,17 @@ async function listarTodosProyectosDeUnGrupo(req, res) {
   try {
     const { codigo_materia, nombre, periodo, anio } = req.query;
     const proyectos = await ProyectoService.listarTodosProyectosDeUnGrupo(
+<<<<<<< HEAD
         codigo_materia,
         nombre, 
         periodo, 
         anio
+=======
+      codigo_materia,
+      nombre,
+      periodo,
+      anio
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     );
     res.json(proyectos);
   } catch (error) {
@@ -318,6 +512,7 @@ async function listarTodosProyectosDeUnGrupo(req, res) {
 }
 
 export const liberarProyecto = async (req, res) => {
+<<<<<<< HEAD
     try {
         const { idProyecto } = req.params;
         const { codigo_usuario } = req.body;
@@ -350,6 +545,40 @@ async function listarPropuestasLibres(req, res) {
             error: error.message
         });
     }
+=======
+  try {
+    const { idProyecto } = req.params;
+    const { codigo_usuario } = req.body;
+
+    if (!codigo_usuario) {
+      return res.status(400).json({ error: "Se requiere el código del usuario líder" });
+    }
+
+    const resultado = await ProyectoService.liberarProyecto(idProyecto, codigo_usuario);
+    return res.status(200).json(resultado);
+
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+async function listarPropuestasLibres(req, res) {
+  try {
+    const propuestas = await ProyectoService.listarPropuestasLibres();
+    res.status(200).json({
+      ok: true,
+      total: propuestas.length,
+      data: propuestas
+    });
+  } catch (error) {
+    console.error("Error al listar el banco de propuestas:", error);
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al listar el banco de propuestas",
+      error: error.message
+    });
+  }
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 }
 
 async function adoptarPropuesta(req, res) {
@@ -419,7 +648,11 @@ async function verDetalleProyecto(req, res) {
   }
 }
 
+<<<<<<< HEAD
  async function generarHistorialProyecto(req, res) {
+=======
+async function generarHistorialProyecto(req, res) {
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
   try {
     const proyecto = await ProyectoService.generarHistorialProyecto(req.params.id_proyecto);
     res.status(200).json(proyecto);
@@ -430,6 +663,19 @@ async function verDetalleProyecto(req, res) {
   }
 }
 
+<<<<<<< HEAD
+=======
+async function obtenerUltimoHistorial(req, res) {
+  try {
+    const { id_proyecto } = req.params;
+    const historial = await ProyectoService.obtenerUltimoHistorialPorProyecto(id_proyecto);
+    res.status(200).json(historial);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+}
+
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 async function calcularAvanceProyecto(req, res) {
   try {
     const proyecto = await ProyectoService.calcularAvanceProyecto(req.params.id_proyecto);
@@ -440,6 +686,7 @@ async function calcularAvanceProyecto(req, res) {
       .json({ message: "Error al obtener materias", error: error.message });
   }
 }
+<<<<<<< HEAD
 export default {
     crearProyectoDesdeIdea,
     obtenerProyecto,
@@ -462,4 +709,357 @@ export default {
     verDetalleProyecto, 
     generarHistorialProyecto, 
     calcularAvanceProyecto
+=======
+
+async function getSemesterProjects(req, res) {
+  try {
+    const data = await ProyectoService.getSemesterProjects();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: "Error obteniendo proyectos semanales" });
+  }
+}
+
+async function getSemesterByLine(req, res) {
+  try {
+    const data = await ProyectoService.getSemesterByLine();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: "Error obteniendo proyectos por línea" });
+  }
+}
+
+async function getSemesterByScope(req, res) {
+  try {
+    const data = await ProyectoService.getSemesterByScope();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: "Error obteniendo proyectos por alcance" });
+  }
+}
+
+async function getSemesterByTech(req, res) {
+  try {
+    const data = await ProyectoService.getSemesterByTech();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: "Error obteniendo proyectos por tecnología" });
+  }
+}
+
+export const createDataProject = async (req, res) => {
+  try {
+    const proyecto = await ProyectoService.createDataProject(req.body);
+    res.status(201).json(proyecto);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+async function exportarProyectosExcel(req, res) {
+  try {
+    const { tipo, fechaInicio, fechaFin, anio, periodo } = req.query;
+
+    if (!tipo || !["fecha", "semestre", "todos"].includes(tipo)) {
+      return res.status(400).json({
+        error: "El tipo debe ser 'fecha', 'semestre' o 'todos'."
+      });
+    }
+
+    const data = await ProyectoService.exportarProyectos({
+      tipo,
+      fechaInicio,
+      fechaFin,
+      anio: anio,
+      periodo: periodo
+    });
+
+    if (data.length === 0)
+      return res.status(404).json({ message: "No hay datos para exportar." });
+
+    // ====================================
+    // Crear Excel
+    // ====================================
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Proyectos");
+
+    // Determinar cuántas columnas URL necesitamos
+    const maxUrls = Math.max(
+      ...data.map(x => x.urls_entregables.length)
+    );
+
+    // Crear columnas base
+    const columnas = [
+      { header: "Grupo", key: "grupo", width: 25 },
+      { header: "Equipo", key: "equipo", width: 40 },
+      { header: "Título", key: "titulo", width: 30 },
+      { header: "Problema", key: "problema", width: 30 },
+      { header: "Justificación", key: "justificacion", width: 30 },
+      { header: "Objetivo General", key: "objetivo_general", width: 30 },
+      { header: "Objetivos Específicos", key: "objetivos_especificos", width: 30 },
+      { header: "Línea de Investigación", key: "linea_investigacion", width: 25 },
+      { header: "Tecnologías", key: "tecnologias", width: 25 },
+      { header: "Palabras Clave", key: "palabras_clave", width: 25 },
+      { header: "Tipo de Alcance", key: "tipo_alcance", width: 20 },
+    ];
+
+    // Agregar columnas dinámicas para URL₁, URL₂, URL₃...
+    for (let i = 1; i <= maxUrls; i++) {
+      columnas.push({
+        header: `URL Entregable ${i}`,
+        key: `url_${i}`,
+        width: 60
+      });
+    }
+
+    // Y columna para fecha
+    columnas.push({
+      header: "Fechas Subida (todas)",
+      key: "fechas_subida",
+      width: 30
+    });
+
+    sheet.columns = columnas;
+
+    // Agregar cada fila
+    data.forEach(row => {
+      const fila = {
+        ...row,
+        fechas_subida: row.fechas_subida.join(" | ")
+      };
+
+      // Colocar las URLs dinámicas
+      row.urls_entregables.forEach((url, index) => {
+        fila[`url_${index + 1}`] = url;
+      });
+
+      sheet.addRow(fila);
+    });
+
+    // ====================================
+    // Respuesta del archivo
+    // ====================================
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=proyectos.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+async function exportarProyectosPDF(req, res) {
+  try {
+    const { tipo, fechaInicio, fechaFin, anio, periodo } = req.query;
+
+    const data = await ProyectoService.exportarProyectos({
+      tipo,
+      fechaInicio,
+      fechaFin,
+      anio: parseInt(anio),
+      periodo: parseInt(periodo)
+    });
+
+    if (data.length === 0)
+      return res.status(404).json({ message: "No hay datos para exportar." });
+
+    // ================================
+    // 1. FUENTES LOCALES
+    // ================================
+    const fonts = {
+      Roboto: {
+        normal: path.resolve("src/fonts/Roboto-Regular.ttf"),
+        bold: path.resolve("src/fonts/Roboto-Bold.ttf"),
+        italics: path.resolve("src/fonts/Roboto-Italic.ttf"),
+        bolditalics: path.resolve("src/fonts/Roboto-Medium.ttf")
+      }
+    };
+
+    const printer = new PdfPrinter(fonts);
+
+    // ================================
+    // 2. ARMAR CONTENIDO FORMATEADO
+    // ================================
+    const contenido = [
+      {
+        text: "REPORTE DE PROYECTOS",
+        style: "tituloPrincipal",
+        margin: [0, 0, 0, 20]
+      }
+    ];
+
+    data.forEach((row, index) => {
+      contenido.push({
+        style: "card",
+        margin: [0, 0, 0, 20],
+        table: {
+          widths: ["100%"],
+          body: [
+            [
+              {
+                stack: [
+                  { text: `Proyecto #${index + 1}`, style: "cardTitulo" },
+
+                  {
+                    columns: [
+                      // COLUMNA 1
+                      [
+                        { text: "Grupo:", style: "campo" },
+                        { text: row.grupo, style: "valor" },
+
+                        { text: "\nEquipo:", style: "campo" },
+                        { text: row.equipo, style: "valor" },
+
+                        { text: "\nTítulo:", style: "campo" },
+                        { text: row.titulo, style: "valor" },
+
+                        { text: "\nProblema:", style: "campo" },
+                        { text: row.problema, style: "valor" },
+
+                        { text: "\nJustificación:", style: "campo" },
+                        { text: row.justificacion, style: "valor" },
+                      ],
+
+                      // COLUMNA 2
+                      [
+                        { text: "Objetivo General:", style: "campo" },
+                        { text: row.objetivo_general, style: "valor" },
+
+                        { text: "\nObjetivos Específicos:", style: "campo" },
+                        { text: row.objetivos_especificos, style: "valor" },
+
+                        { text: "\nLínea de Investigación:", style: "campo" },
+                        { text: row.linea_investigacion, style: "valor" },
+
+                        { text: "\nTecnologías:", style: "campo" },
+                        { text: row.tecnologias, style: "valor" },
+
+                        { text: "\nTipo de Alcance:", style: "campo" },
+                        { text: row.tipo_alcance, style: "valor" },
+
+                        { text: "\nEntregables:", style: "campo" },
+                        ...row.urls_entregables.map((u, i) => ({
+                          text: `• Entregable ${i + 1}: ${u}`,
+                          style: "valor"
+                        })),
+
+                        { text: "\nFechas de subida:", style: "campo" },
+                        {
+                          text: row.fechas_subida.join(" | "),
+                          style: "valor"
+                        }
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        layout: {
+          paddingLeft: () => 10,
+          paddingRight: () => 10,
+          paddingTop: () => 10,
+          paddingBottom: () => 10,
+          hLineColor: () => "#cccccc",
+          vLineColor: () => "#cccccc"
+        }
+      });
+    });
+
+    // ================================
+    // 3. DEFINICIÓN PDF
+    // ================================
+    const docDefinition = {
+      pageSize: "A4",
+      pageMargins: [40, 40, 40, 40],
+      content: contenido,
+      styles: {
+        tituloPrincipal: {
+          fontSize: 22,
+          bold: true,
+          color: "#1D3557",
+          alignment: "center"
+        },
+        card: {
+          fillColor: "#F7F7F7",
+          margin: [0, 10]
+        },
+        cardTitulo: {
+          fontSize: 16,
+          bold: true,
+          color: "#457B9D",
+          margin: [0, 0, 0, 10]
+        },
+        campo: {
+          fontSize: 11,
+          bold: true,
+          margin: [0, 4, 0, 0],
+          color: "#1D3557"
+        },
+        valor: {
+          fontSize: 11,
+          margin: [0, 0, 0, 6]
+        }
+      }
+    };
+
+    // ================================
+    // 4. GENERAR PDF
+    // ================================
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "attachment; filename=proyectos.pdf");
+
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
+
+export default {
+  crearProyectoDesdeIdea,
+  obtenerProyecto,
+  rechazarObservacion,
+  obtenerUltimoHistorial,
+  /*listarProyectosPorGrupo,*/
+  actualizarProyecto,
+  listarParaDirector,
+  listarTodosProyectosDeUnEstudiante,
+  listarTodosProyectosDeUnProfesor,
+  listarTodosProyectosDeUnGrupo,
+  liberarProyecto,
+  actualizarProyecto,
+  listarParaDirector,
+  revisarProyecto,
+  adoptarPropuesta,
+  calificarProyecto,
+  listarPropuestasLibres,
+  obtenerProyectosContinuables,
+  continuarProyecto,
+  verDetalleProyecto,
+  generarHistorialProyecto,
+  calcularAvanceProyecto,
+  getSemesterProjects,
+  getSemesterByLine,
+  getSemesterByScope,
+  getSemesterByTech,
+  createDataProject,
+  exportarProyectosExcel,
+  exportarProyectosPDF
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 };

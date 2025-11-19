@@ -29,6 +29,34 @@ async function obtenerEntregablesPorProyectoYActividad(req, res) {
   }
 }
 
+<<<<<<< HEAD
+=======
+async function obtenerEntregablesPorProyecto(req, res) {
+  try {
+    const { id_proyecto } = req.params;
+
+    if (!id_proyecto) {
+      return res.status(400).json({
+        error: "ID de proyecto es requerido"
+      });
+    }
+
+    const entregables = await EntregableService.obtenerEntregablesPorProyecto(
+      id_proyecto,
+    );
+
+    return res.status(200).json(entregables);
+
+  } catch (error) {
+    console.error("Error al obtener entregables:", error);
+    return res.status(500).json({
+      error: "Error al obtener los entregables",
+      detalle: error.message
+    });
+  }
+}
+
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 async function actualizarEntregable(req, res) {
   try {
     const { id_entregable } = req.params;
@@ -42,7 +70,11 @@ async function actualizarEntregable(req, res) {
       return res.status(400).json({ error: "Código de usuario requerido" });
     }
 
+<<<<<<< HEAD
     const entregableExistente = await EntregableService.obtenerEntregablePorId(id_entregable);
+=======
+    const entregableExistente = await EntregableService.obtenerEntregablePorIdCalificado(id_entregable);
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 
     if (!entregableExistente) {
       return res.status(404).json({ error: "Entregable no encontrado" });
@@ -314,7 +346,12 @@ async function obtenerTiposEntregable(req, res) {
 }
 
 export default {
+<<<<<<< HEAD
   obtenerEntregablesPorProyectoYActividad, 
+=======
+  obtenerEntregablesPorProyectoYActividad,
+  obtenerEntregablesPorProyecto, 
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
   deshabilitarEntregable,
   actualizarEntregable,
   extraerTextoDocumento,
@@ -324,4 +361,8 @@ export default {
   retroalimentarEntregable,
   obtenerTiposEntregable,
   listarHistorialPorProyecto
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc

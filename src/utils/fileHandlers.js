@@ -12,7 +12,11 @@ const git = simpleGit();
 /**
  * Sube un archivo local a Firebase Storage
  */
+<<<<<<< HEAD
 async function subirArchivoAFirebase(file, filePath, folder = "entregables") {
+=======
+async function subirArchivoAFirebase(file, filePath, folder = "preguntas") {
+>>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
   try {
     const fileName = path.basename(filePath);
     const destination = `${folder}/${fileName.replace(/\\/g, "_")}`;

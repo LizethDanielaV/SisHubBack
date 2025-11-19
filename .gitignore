@@ -1,4 +1,7 @@
 # Logs
+serviceAccountKey.json
+
+
 logs
 *.log
 npm-debug.log*
@@ -18,7 +21,7 @@ dist-ssr
 .env.local
 .env.*.local
 serviceAccountKey.json
-
+*.json
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
