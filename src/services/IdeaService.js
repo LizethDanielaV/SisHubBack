@@ -728,6 +728,7 @@ async function listarIdeasPorGrupo(datosGrupo) {
 }
 
 
+
 async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
     const transaction = await db.transaction();
     try {
@@ -818,6 +819,10 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
 
         await transaction.commit();
         return { message: mensaje, idea };
+<<<<<<<<< Temporary merge branch 1
+=========
+
+>>>>>>>>> Temporary merge branch 2
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al revisar la idea: " + error.message);
