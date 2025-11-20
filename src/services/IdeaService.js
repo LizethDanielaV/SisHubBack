@@ -9,11 +9,7 @@ import Actividad from "../models/Actividad.js";
 import IntegranteEquipo from "../models/IntegrantesEquipo.js";
 import HistorialIdea from "../models/HistorialIdea.js";
 import db from "../db/db.js";
-<<<<<<< HEAD
-import { Op } from 'sequelize';
-=======
 import { Op, Sequelize } from 'sequelize';
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 
 async function crearIdea(datosIdea) {
     const transaction = await db.transaction();
@@ -525,10 +521,7 @@ async function obtenerIdeaPorId(idIdea) {
 
 async function listarIdeasLibres() {
   try {
-<<<<<<< HEAD
-=======
     // 🔹 Buscar el estado 'LIBRE'
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     const estadoLibre = await Estado.findOne({
       where: { descripcion: "LIBRE" },
       attributes: ["id_estado"],
@@ -538,16 +531,9 @@ async function listarIdeasLibres() {
       throw new Error("No se encontró el estado 'LIBRE' en la base de datos");
     }
 
-<<<<<<< HEAD
-    const ideas = await Idea.findAll({
-      where: {
-        id_estado: estadoLibre.id_estado,
-      },
-=======
     // 🔹 Buscar las ideas con estado LIBRE
     const ideas = await Idea.findAll({
       where: { id_estado: estadoLibre.id_estado },
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
       attributes: [
         "id_idea",
         "titulo",
@@ -568,25 +554,12 @@ async function listarIdeasLibres() {
         },
         {
           model: Proyecto,
-<<<<<<< HEAD
-=======
           as: "proyectos", // ✅ Alias correcto
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
           required: false, // LEFT JOIN
           attributes: ["id_proyecto"],
         },
       ],
       order: [["id_idea", "DESC"]],
-<<<<<<< HEAD
-      raw: true,
-    });
-
-    // ✅ Solo mantener ideas sin proyecto asociado
-    const ideasSinProyecto = ideas.filter(i => i["Proyectos.id_proyecto"] === null);
-
-    // ✅ Mapear para tener `estado` como campo plano
-    const resultado = ideasSinProyecto.map(i => ({
-=======
       limit: 100,
       raw: true,
     });
@@ -598,7 +571,6 @@ async function listarIdeasLibres() {
 
     // 🔹 Mapear resultado final con estado plano
     const resultado = ideasSinProyecto.map((i) => ({
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
       id_idea: i.id_idea,
       titulo: i.titulo,
       problema: i.problema,
@@ -609,23 +581,15 @@ async function listarIdeasLibres() {
       nombre: i.nombre,
       periodo: i.periodo,
       anio: i.anio,
-<<<<<<< HEAD
-      estado: i["Estado.descripcion"], // estado fuera del include
-=======
       estado: i["Estado.descripcion"],
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     }));
 
     return resultado;
   } catch (error) {
     console.error("Error al listar ideas LIBRES:", error);
-<<<<<<< HEAD
-    throw new Error("No fue posible listar las ideas con estado LIBRE y sin proyecto asociado");
-=======
     throw new Error(
       "No fue posible listar las ideas con estado LIBRE y sin proyecto asociado"
     );
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
   }
 }
 
@@ -704,25 +668,6 @@ async function adoptarIdea(id_idea, codigo_usuario, grupo) {
 
 async function listarIdeasPorGrupo(datosGrupo) {
   try {
-<<<<<<< HEAD
-    // 🔹 Obtener los id_idea que ya tienen proyecto
-    const ideasConProyecto = await Proyecto.findAll({
-      attributes: ["id_idea"],
-      raw: true,
-    });
-
-    const idsConProyecto = ideasConProyecto.map((p) => p.id_idea);
-
-    // 🔹 Traer solo las ideas del grupo que no estén en esa lista
-    const ideas = await Idea.findAll({
-      where: {
-        codigo_materia: datosGrupo.codigo_materia,
-        nombre: datosGrupo.nombre,
-        periodo: datosGrupo.periodo,
-        anio: datosGrupo.anio,
-        id_idea: { [Op.notIn]: idsConProyecto },
-      },
-=======
     const ideas = await Idea.findAll({
       attributes: [
         "id_idea",
@@ -733,7 +678,6 @@ async function listarIdeasPorGrupo(datosGrupo) {
         "periodo",
         "anio",
       ],
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
       include: [
         {
           model: Estado,
@@ -746,13 +690,6 @@ async function listarIdeasPorGrupo(datosGrupo) {
           attributes: ["codigo", "nombre", "correo"],
         },
       ],
-<<<<<<< HEAD
-      order: [["id_idea", "DESC"]],
-    });
-
-    // 🔁 Formatear salida con estado fuera del objeto
-    const resultado = ideas.map((idea) => ({
-=======
       where: {
         codigo_materia: datosGrupo.codigo_materia,
         nombre: datosGrupo.nombre,
@@ -772,7 +709,6 @@ async function listarIdeasPorGrupo(datosGrupo) {
     });
 
     return ideas.map((idea) => ({
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
       id_idea: idea.id_idea,
       titulo: idea.titulo,
       objetivo_general: idea.objetivo_general,
@@ -780,19 +716,11 @@ async function listarIdeasPorGrupo(datosGrupo) {
       nombre: idea.nombre,
       periodo: idea.periodo,
       anio: idea.anio,
-<<<<<<< HEAD
-      estado: idea.Estado?.descripcion || null, 
-      Usuario: idea.Usuario, 
-    }));
-
-    return resultado;
-=======
       estado: idea.Estado?.descripcion || null,
       usuario_codigo: idea.Usuario?.codigo || null,
       usuario_nombre: idea.Usuario?.nombre || null,
       usuario_correo: idea.Usuario?.correo || null,
     }));
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
   } catch (error) {
     console.error("Error al listar ideas por grupo:", error);
     throw new Error("No fue posible listar las ideas del grupo sin proyecto");
@@ -800,20 +728,12 @@ async function listarIdeasPorGrupo(datosGrupo) {
 }
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
     const transaction = await db.transaction();
     try {
         const idea = await Idea.findByPk(id_idea);
         if (!idea) throw new Error("Idea no encontrada");
 
-<<<<<<< HEAD
-        // Validar acción permitida
-=======
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         const accionesValidas = ["Aprobar", "Aprobar_Con_Observacion", "Rechazar"];
         if (!accionesValidas.includes(accion)) {
             throw new Error("Acción no válida. Use: Aprobar, Aprobar_Con_Observacion o Rechazar");
@@ -837,10 +757,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                 nuevoEstado = await Estado.findOne({ where: { descripcion: "RECHAZADO" } });
                 mensaje = "Idea rechazada. El estudiante deberá crear una nueva propuesta.";
 
-<<<<<<< HEAD
-=======
                 // 🔹 Buscar equipos del grupo
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
                 const equiposDelGrupo = await Equipo.findAll({
                     where: {
                         codigo_materia: idea.codigo_materia,
@@ -854,26 +771,6 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                 const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
 
                 if (idsEquipos.length > 0) {
-<<<<<<< HEAD
-                    const lider = await IntegranteEquipo.findOne({
-                        where: {
-                            codigo_usuario: idea.codigo_usuario,
-                            es_lider: true,
-                            id_equipo: { [Op.in]: idsEquipos }
-                        },
-                        include: [{ model: Equipo }],
-                        transaction
-                    });
-
-                    if (lider && lider.equipo) {
-                        const equipo = lider.equipo;
-                        equipo.estado = false;
-                        await equipo.save({ transaction });
-                    }
-                }
-
-                // Cambiar campos de la idea
-=======
                     // 🔸 Eliminar integrantes y equipo
                     await IntegranteEquipo.destroy({
                         where: { id_equipo: { [Op.in]: idsEquipos } },
@@ -891,21 +788,11 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
                 if (!estadoLibre) throw new Error("No se encontró el estado LIBRE.");
 
                 idea.id_estado = estadoLibre.id_estado;
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
                 idea.codigo_materia = null;
                 idea.nombre = null;
                 idea.periodo = null;
                 idea.anio = null;
-<<<<<<< HEAD
-                idea.codigo_usuario = null; // <--- se deja sin usuario
-                // Buscar estado "LIBRE" y asignarlo
-                const estadoLibre = await Estado.findOne({ where: { descripcion: "LIBRE" } });
-                if (!estadoLibre) throw new Error("No se encontró el estado LIBRE.");
-                idea.id_estado = estadoLibre.id_estado;
-
-=======
                 idea.codigo_usuario = null;
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
                 await idea.save({ transaction });
                 break;
         }
@@ -916,11 +803,7 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
             await idea.save({ transaction });
         }
 
-<<<<<<< HEAD
-        // Registrar en historial
-=======
         // 🔹 Registrar en historial
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         const textoObservacion = observacion
             ? `${mensaje} Observaciones: ${observacion}`
             : mensaje;
@@ -935,10 +818,6 @@ async function revisarIdea(id_idea, accion, observacion, codigo_usuario) {
 
         await transaction.commit();
         return { message: mensaje, idea };
-<<<<<<< HEAD
-=======
-
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al revisar la idea: " + error.message);
@@ -952,18 +831,10 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
         const idea = await Idea.findByPk(id_idea);
         if (!idea) throw new Error("Idea no encontrada");
 
-<<<<<<< HEAD
-        // Validar que la idea esté en estado STAND_BY
-=======
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         const estadoStandBy = await Estado.findOne({ where: { descripcion: "STAND_BY" } });
         if (idea.id_estado !== estadoStandBy.id_estado)
             throw new Error("Solo se pueden mover al banco las ideas en estado 'Aprobada con observaciones'.");
 
-<<<<<<< HEAD
-        // Buscar estado de destino EN_BANCO
-=======
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         const estadoBanco = await Estado.findOne({ where: { descripcion: "LIBRE" } });
         if (!estadoBanco) throw new Error("Estado 'LIBRE' no encontrado");
 
@@ -979,27 +850,6 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
 
         const idsEquipos = equiposDelGrupo.map(e => e.id_equipo);
 
-<<<<<<< HEAD
-        const lider = await IntegranteEquipo.findOne({
-            where: {
-                codigo_usuario: codigo_usuario,
-                es_lider: true,
-                id_equipo: idsEquipos.length > 0 ? { [Op.in]: idsEquipos } : null
-            }, include: [{ model: Equipo }]
-        });
-
-        if (!lider || !lider.es_lider) {
-            throw new Error("Solo el líder del equipo puede realizar esta acción.");
-        }
-
-
-        // 5️⃣ Desactivar ese equipo
-        const equipo = lider.equipo;
-        equipo.estado = false;
-        await equipo.save({ transaction });
-
-        // Cambiar estado
-=======
         if (idsEquipos.length > 0) {
             // 🔸 Eliminar integrantes y equipo asociados
             await IntegranteEquipo.destroy({
@@ -1014,7 +864,6 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
         }
 
         // 🔹 Limpiar datos de la idea y actualizar estado
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         idea.id_estado = estadoBanco.id_estado;
         idea.codigo_usuario = null;
         idea.codigo_materia = null;
@@ -1023,11 +872,7 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
         idea.anio = null;
         await idea.save({ transaction });
 
-<<<<<<< HEAD
-        // Registrar en historial
-=======
         // 🔹 Registrar en historial
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         await HistorialIdea.create({
             fecha: new Date(),
             observacion: "El estudiante decidió no corregir la idea. Movida al banco de ideas.",
@@ -1035,43 +880,20 @@ async function moverIdeaAlBancoPorDecision(id_idea, codigo_usuario) {
             id_idea: idea.id_idea,
             codigo_usuario
         }, { transaction });
-<<<<<<< HEAD
-        await transaction.commit();
-        return { message: "Idea movida al banco de ideas exitosamente.", idea };
-=======
 
         await transaction.commit();
         return { message: "Idea movida al banco de ideas y equipo eliminado exitosamente.", idea };
 
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al mover la idea al banco: " + error.message);
     }
 }
 
-<<<<<<< HEAD
-async function verificarIdeaYProyecto(codigo_usuario, grupo) {
-  try {
-    const idea = await Idea.findOne({
-      where: {
-        codigo_usuario,
-        codigo_materia: grupo.codigo_materia,
-        nombre: grupo.nombre,
-        periodo: grupo.periodo,
-        anio: grupo.anio
-      },
-      include: [
-        { model: Estado, as: "Estado", attributes: ["descripcion"] }
-      ]
-    });
-
-=======
 
 async function verificarIdeaYProyecto(codigo_usuario, grupo) {
   try {
     console.log("codigo usuario", codigo_usuario);
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     const equipo = await Equipo.findOne({
       where: {
         codigo_materia: grupo.codigo_materia,
@@ -1085,17 +907,11 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
           model: IntegranteEquipo,
           as: "Integrante_Equipos",
           where: { codigo_usuario },
-<<<<<<< HEAD
-          required: false
-=======
           required: true
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
         }
       ]
     });
 
-<<<<<<< HEAD
-=======
     // Si no pertenece a un equipo activo, puede crear idea nueva
     if (!equipo) {
       return {
@@ -1130,20 +946,10 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
       include: [{ model: Estado, as: "Estado", attributes: ["descripcion"] }]
     });
 
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     let proyecto = null;
     if (idea) {
       proyecto = await Proyecto.findOne({
         where: { id_idea: idea.id_idea },
-<<<<<<< HEAD
-        include: [
-          { model: Estado, as: "Estado", attributes: ["descripcion"] }
-        ]
-      });
-    }
-
-    // 4️⃣ Respuesta estructurada
-=======
         include: [{ model: Estado, as: "Estado", attributes: ["descripcion"] }]
 
 
@@ -1152,18 +958,13 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
 
     const estadoIdea = idea?.Estado?.descripcion || null;
     const estadoProyecto = proyecto?.Estado?.descripcion || null;
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     return {
       tieneIdea: !!idea,
       idea: idea
         ? {
             id_idea: idea.id_idea,
             titulo: idea.titulo,
-<<<<<<< HEAD
-            estado: idea.Estado.descripcion
-=======
             estado: estadoIdea
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
           }
         : null,
       tieneProyecto: !!proyecto,
@@ -1171,18 +972,6 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
         ? {
             id_proyecto: proyecto.id_proyecto,
             titulo: proyecto.titulo,
-<<<<<<< HEAD
-            estado: proyecto.Estado.descripcion
-          }
-        : null,
-      equipo: equipo
-        ? {
-            id_equipo: equipo.id_equipo,
-            activo: equipo.estado,
-            miembros: equipo.Integrante_Equipos.length
-          }
-        : null
-=======
             estado: estadoProyecto
           }
         : null,
@@ -1192,7 +981,6 @@ async function verificarIdeaYProyecto(codigo_usuario, grupo) {
         lider: lider.codigo_usuario,
         miembros: equipo.Integrante_Equipos.length
       }
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
     };
   } catch (error) {
     throw new Error("Error al verificar idea y proyecto: " + error.message);

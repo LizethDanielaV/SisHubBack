@@ -459,4 +459,15 @@ export const buscarEstudiantePorCodigo = async (req, res) => {
   }
 };
 
+export async function informacionPerfil(req, res) {
+  try {
+    const { codigo } = req.params;
+    const info = await UsuarioService.informacionPerfilUsuario(codigo);
+    res.json(info);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener materias", error: error.message });
+  }
+}
 

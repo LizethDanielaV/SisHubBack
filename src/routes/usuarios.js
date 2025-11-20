@@ -12,7 +12,8 @@ import {
     listarDocentes,
     listarEstudiantes,
     registrarUsuario,
-    obtenerUsuarioPorUid
+    obtenerUsuarioPorUid, 
+    informacionPerfil
 } from "../controllers/usuarioController.js";
 
 const router = express.Router();
@@ -29,5 +30,5 @@ router.patch("/:codigo/rechazar", verificarToken, verificarRol([1]), rechazarPos
 router.get("/docentes", verificarToken, verificarRol([1]), listarDocentes);
 router.get("/estudiantes", verificarToken, verificarRol([1]), listarEstudiantes);
 router.get("/estudiantes/:codigo", verificarToken, verificarRol([1]), buscarEstudiantePorCodigo);
-
+router.get("/informacion/perfil/:codigo", /*verificarToken, verificarRol([1])*/ informacionPerfil);
 export default router;

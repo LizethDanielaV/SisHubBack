@@ -86,15 +86,12 @@ router.get(
   EntregableController.obtenerEntregablesPorProyectoYActividad
 );
 
-<<<<<<< HEAD
-=======
 router.get(
   "/proyecto/:id_proyecto",
   // verificarToken,
   EntregableController.obtenerEntregablesPorProyecto
 );
 
->>>>>>> f9dbfc58c3f2bb43145ed565918c18d2c254b2bc
 router.post(
   "/extraer-texto",
   // verificarToken,
