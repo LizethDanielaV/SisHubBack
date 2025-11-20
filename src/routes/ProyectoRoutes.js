@@ -37,6 +37,7 @@ router.patch("/:id", /* verificarToken,  */ProyectoController.actualizarProyecto
 router.get("/verDetalle/:id_proyecto", ProyectoController.verDetalleProyecto);
 router.get("/historial/:id_proyecto", ProyectoController.generarHistorialProyecto);
 router.get("/avance/:id_proyecto", ProyectoController.calcularAvanceProyecto);
-
+router.get("/exportar/proyectos", ProyectoController.exportarProyectosExcel);
+router.get("/exportar/pdf", ProyectoController.exportarProyectosPDF);
 
 export default router;

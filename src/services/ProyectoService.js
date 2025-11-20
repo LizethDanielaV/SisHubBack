@@ -467,7 +467,7 @@ async function listarProyectosDirector() {
     try {
         const proyectos = await Proyecto.findAll({
             where: {
-                id_estado: { [Op.ne]: 13 } 
+                id_estado: { [Op.ne]: 13 }
             },
             include: [
                 {
@@ -843,13 +843,13 @@ export async function createDataProject(data) {
         } = data;
 
         const nuevoProyecto = await Proyecto.create({
-            fecha_creacion: fecha_creacion, 
+            fecha_creacion: fecha_creacion,
             linea_investigacion: linea_investigacion || null,
             tecnologias: tecnologias || null,
             id_tipo_alcance: id_tipo_alcance || null,
-            palabras_clave: null, 
-            id_idea: null,      
-            id_estado: 13 
+            palabras_clave: null,
+            id_idea: null,
+            id_estado: 13
         });
 
         return nuevoProyecto;
@@ -1806,7 +1806,7 @@ function getSemester(dateStr) {
         return `${year}-2`;
     }
 
-    return null; 
+    return null;
 }
 
 async function getSemesterProjects() {
@@ -1824,7 +1824,7 @@ async function getSemesterProjects() {
     });
 
     return Object.entries(grouped).map(([semester, total]) => ({
-        semester: semester, 
+        semester: semester,
         total
     }));
 }
@@ -1854,7 +1854,7 @@ async function getSemesterByLine() {
 
     const rows = [];
     for (const semester in grouped) {
-        const row = { semester: semester }; 
+        const row = { semester: semester };
         Object.entries(grouped[semester]).forEach(([line, count]) => {
             row[line] = count;
         });
@@ -1925,7 +1925,7 @@ async function getSemesterByTech() {
 
     const rows = [];
     for (const semester in grouped) {
-        const row = { semester: semester }; 
+        const row = { semester: semester };
         Object.entries(grouped[semester]).forEach(([tech, count]) => {
             row[tech] = count;
         });
@@ -1933,6 +1933,116 @@ async function getSemesterByTech() {
     }
 
     return rows;
+}
+
+
+async function exportarProyectos({ tipo, fechaInicio, fechaFin, anio, periodo }) {
+    try {
+        let where = {};
+
+        if (tipo === "fecha") {
+            if (!fechaInicio || !fechaFin)
+                throw new Error("Debe proporcionar fechaInicio y fechaFin");
+
+            where.fecha_subida = {
+                [Op.between]: [new Date(fechaInicio), new Date(fechaFin)]
+            };
+        }
+
+        const entregables = await Entregable.findAll({
+            where,
+            include: [
+                { model: Proyecto, include: [{ model: Idea }] },
+                { model: Equipo },
+                {
+                    model: Actividad,
+                    include: [{ model: TipoAlcance, attributes: ["nombre"] }]
+                }
+            ]
+        });
+
+        if (entregables.length === 0) return [];
+
+        let filtrados = entregables;
+
+        if (tipo === "semestre") {
+            console.log("Filtrando por semestre:", anio, periodo);
+
+            if (!anio || !periodo)
+                throw new Error("Debe proporcionar anio y periodo");
+
+            filtrados = filtrados.filter(e => {
+                return (
+                    String(e.equipo.anio) === String(anio) &&
+                    String(e.equipo.periodo) === String(periodo)
+                );
+            });
+
+            console.log("TOTAL FILTRADOS:", filtrados.length);
+        }
+
+
+        const mapa = new Map();
+
+        for (const ent of filtrados) {
+            const proyecto = ent.proyecto;
+            const idea = proyecto?.Idea;
+            const equipo = ent.equipo;
+
+            const grupo = await Grupo.findOne({
+                where: {
+                    codigo_materia: equipo.codigo_materia,
+                    nombre: equipo.nombre,
+                    periodo: equipo.periodo,
+                    anio: equipo.anio
+                }
+            });
+
+            const grupoStr = grupo
+                ? `${grupo.codigo_materia}-${grupo.nombre}-${grupo.periodo}-${grupo.anio}`
+                : "No encontrado";
+
+            const integrantes = await IntegranteEquipo.findAll({
+                where: { id_equipo: equipo.id_equipo },
+                include: [{ model: Usuario }]
+            });
+
+            const listaIntegrantes = integrantes.map(i =>
+                `${i.Usuario.codigo} - ${i.Usuario.nombre}`
+            );
+
+            const tipo_alcance = ent.actividad?.Tipo_alcance?.nombre || "Sin tipo";
+
+            const key = `${proyecto.id_proyecto}-${equipo.id_equipo}-${tipo_alcance}`;
+
+            if (!mapa.has(key)) {
+                mapa.set(key, {
+                    titulo: idea?.titulo || "",
+                    problema: idea?.problema || "",
+                    justificacion: idea?.justificacion || "",
+                    objetivo_general: idea?.objetivo_general || "",
+                    objetivos_especificos: idea?.objetivos_especificos || "",
+                    linea_investigacion: proyecto?.linea_investigacion || "",
+                    tecnologias: proyecto?.tecnologias || "",
+                    palabras_clave: proyecto?.palabras_clave || "",
+                    tipo_alcance,
+                    grupo: grupoStr,
+                    equipo: listaIntegrantes.join(", "),
+                    urls_entregables: [],
+                    fechas_subida: []
+                });
+            }
+
+            const fila = mapa.get(key);
+            fila.urls_entregables.push(ent.url_archivo);
+            fila.fechas_subida.push(ent.fecha_subida);
+        }
+
+        return [...mapa.values()];
+
+    } catch (error) {
+        throw new Error("Error al exportar proyectos: " + error.message);
+    }
 }
 
 
@@ -1960,5 +2070,6 @@ export default {
     getSemesterByLine,
     getSemesterByScope,
     getSemesterByTech,
-    createDataProject
+    createDataProject,
+    exportarProyectos
 };
