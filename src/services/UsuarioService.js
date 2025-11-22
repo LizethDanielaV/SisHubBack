@@ -393,7 +393,7 @@ async function informacionPerfilUsuario(codigo) {
     const vecesLider = infoBasica.Integrante_Equipos.filter(eq => eq.es_lider).length;
 
     //traer tecnologias que ha usado
-    const tecnologiasUsadas = obtenerTecnologiasEstudiante(infoBasica);
+    const tecnologiasUsadas = contarTecnologiasEstudiante(infoBasica);
     //traer lineas usadas
     const lineas = obtenerLineasEstudiante(infoBasica);
     //informacion añio, peridoo y proyectos 
@@ -423,7 +423,6 @@ async function informacionPerfilUsuario(codigo) {
     throw error;
   }
 }
-
 function contarProyectosEstudiante(data) {
   const proyectosUnicos = new Set();
 
@@ -434,6 +433,44 @@ function contarProyectosEstudiante(data) {
   });
 
   return proyectosUnicos.size;
+}
+
+function contarTecnologiasEstudiante(data) {
+  const tecnologiasCount = {};
+  const proyectosVistos = new Set(); // Para contar cada proyecto solo una vez
+
+  data.Integrante_Equipos.forEach(integrante => {
+    integrante.equipo.Historial_Proyectos.forEach(historial => {
+      const proyecto = historial.proyecto;
+      
+      // Solo contar cada proyecto una vez (evitar duplicados)
+      if (proyecto && !proyectosVistos.has(proyecto.id_proyecto)) {
+        proyectosVistos.add(proyecto.id_proyecto);
+        
+        if (proyecto.tecnologias) {
+          // Dividir las tecnologías por coma y procesar cada una
+          const techs = proyecto.tecnologias
+            .split(',')
+            .map(tech => tech.trim())
+            .filter(tech => tech.length > 0);
+          
+          techs.forEach(tech => {
+            // Incrementar el contador para esta tecnología
+            if (tecnologiasCount[tech]) {
+              tecnologiasCount[tech]++;
+            } else {
+              tecnologiasCount[tech] = 1;
+            }
+          });
+        }
+      }
+    });
+  });
+
+  // Convertir el objeto a un array ordenado por frecuencia (de mayor a menor)
+  return Object.entries(tecnologiasCount)
+    .map(([tecnologia, cantidad]) => ({ tecnologia, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad);
 }
 
 function obtenerTecnologiasEstudiante(data) {
@@ -602,6 +639,19 @@ function generarResumenSimple(infoBasica) {
 
 En cuanto a los roles desempeñados, el estudiante ha participado ${roleInfo}. Esta información permite identificar cómo ha evolucionado su participación de acuerdo con cada semestre.`;
 }
+
+
+async function probarInformacionPerfil() {
+  try {
+    const codigo = "1552220"; // Cambia por el código que quieras probar
+    const resultado = await informacionPerfilUsuario(codigo);
+    console.log(resultado);
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+probarInformacionPerfil();
 
 
 export default { buscarEstudiantePorCodigo, listarEstudiantes, listarDocentes, obtenerFotoPerfil, cargarDocentesMasivamente, informacionPerfilUsuario };
