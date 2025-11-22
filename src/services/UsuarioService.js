@@ -288,27 +288,27 @@ async function cargarDocentesMasivamente(docentes, progressId = null) {
 }
 
 async function listarDocentes() {
-    try {
-        const docentes = await Usuario.findAll({
-            where: { id_rol: '2' },
-            attributes: ['codigo', 'nombre', 'correo']
-        });
-        return docentes;
-    } catch (error) {
-        throw new Error("Error al listar docentes: " + error.message);
-    }
+  try {
+    const docentes = await Usuario.findAll({
+      where: { id_rol: '2' },
+      attributes: ['codigo', 'nombre', 'correo']
+    });
+    return docentes;
+  } catch (error) {
+    throw new Error("Error al listar docentes: " + error.message);
+  }
 }
 
 async function listarEstudiantes() {
-    try {
-        const docentes = await Usuario.findAll({
-            where: { id_rol: '3' },
-            attributes: ['codigo', 'nombre', 'correo']
-        });
-        return docentes;
-    } catch (error) {
-        throw new Error("Error al listar docentes: " + error.message);
-    }
+  try {
+    const docentes = await Usuario.findAll({
+      where: { id_rol: '3' },
+      attributes: ['codigo', 'nombre', 'correo']
+    });
+    return docentes;
+  } catch (error) {
+    throw new Error("Error al listar docentes: " + error.message);
+  }
 }
 
 async function buscarEstudiantePorCodigo(codigo) {
@@ -340,29 +340,29 @@ async function buscarEstudiantePorCodigo(codigo) {
 }
 
 async function obtenerFotoPerfil(uid_firebase) {
-    try {
-        const userRecord = await admin.auth().getUser(uid_firebase);
-        return {
-            success: true,
-            photoURL: userRecord.photoURL || null,
-            displayName: userRecord.displayName
-        };
-    } catch (error) {
-        return {
-            success: false,
-            message: 'Usuario no encontrado'
-        };
-    }
+  try {
+    const userRecord = await admin.auth().getUser(uid_firebase);
+    return {
+      success: true,
+      photoURL: userRecord.photoURL || null,
+      displayName: userRecord.displayName
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: 'Usuario no encontrado'
+    };
+  }
 }
 
 async function informacionPerfilUsuario(codigo) {
-    if(!codigo){
-         throw new Error("El codigo no puede estar vacio");
-    }
-    try {
-        const infoBasica = await Usuario.findOne({
-           where: { codigo: codigo },
-      attributes: ["codigo", "nombre", "correo", "documento"],
+  if (!codigo) {
+    throw new Error("El codigo no puede estar vacio");
+  }
+  try {
+    const infoBasica = await Usuario.findOne({
+      where: { codigo: codigo },
+      attributes: ["codigo", "nombre", "correo", "documento", "uid_firebase"],
       include: [
         {
           model: IntegranteEquipo,
@@ -371,12 +371,12 @@ async function informacionPerfilUsuario(codigo) {
               model: Equipo,
               include: [
                 {
-                  model: HistorialProyecto, 
+                  model: HistorialProyecto,
                   include: [{
                     model: Proyecto,
                     attributes: ["id_proyecto", "tecnologias", "linea_investigacion"],
                     include: [{
-                      model: Idea, 
+                      model: Idea,
                       attributes: ["titulo"]
                     }]
                   }]
@@ -386,11 +386,11 @@ async function informacionPerfilUsuario(codigo) {
           ],
         },
       ],
-      })
-      //contar la cantidad de proyectos
-      const numeroProyectos = contarProyectosEstudiante(infoBasica);
-      //contar cantidad de veces lider
-      const vecesLider = infoBasica.Integrante_Equipos.filter(eq => eq.es_lider).length;
+    })
+    //contar la cantidad de proyectos
+    const numeroProyectos = contarProyectosEstudiante(infoBasica);
+    //contar cantidad de veces lider
+    const vecesLider = infoBasica.Integrante_Equipos.filter(eq => eq.es_lider).length;
 
     //traer tecnologias que ha usado
     const tecnologiasUsadas = obtenerTecnologiasEstudiante(infoBasica);
@@ -401,7 +401,9 @@ async function informacionPerfilUsuario(codigo) {
     //generar resumen del perfil 
     const resumen = await generarResumenPreferenciasEstudiante(infoBasica);
 
-      // Construir objeto plano con solo lo que se requiere
+    const fotoPerfil = await obtenerFotoPerfil(infoBasica.uid_firebase);
+
+    // Construir objeto plano con solo lo que se requiere
     const resultadoInfoBasica = {
       codigo: infoBasica.codigo,
       nombre: infoBasica.nombre,
@@ -409,51 +411,52 @@ async function informacionPerfilUsuario(codigo) {
       documento: infoBasica.documento,
       cantidadVecesLider: vecesLider,
       cantidadProyectos: numeroProyectos,
-      tecnologias: tecnologiasUsadas, 
-      lineasInvestigacion: lineas, 
-      proyectosPeriodo: proyectosPorPeriodo, 
-      resumenPerfil: resumen
+      tecnologias: tecnologiasUsadas,
+      lineasInvestigacion: lineas,
+      proyectosPeriodo: proyectosPorPeriodo,
+      resumenPerfil: resumen,
+      fotoPerfil: fotoPerfil.success ? fotoPerfil.photoURL : null
     };
 
     return resultadoInfoBasica;
-    } catch (error) {
-        throw error;
-    }
+  } catch (error) {
+    throw error;
+  }
 }
 
 function contarProyectosEstudiante(data) {
   const proyectosUnicos = new Set();
-  
+
   data.Integrante_Equipos.forEach(integrante => {
     integrante.equipo.Historial_Proyectos.forEach(historial => {
       proyectosUnicos.add(historial.id_proyecto);
     });
   });
-  
+
   return proyectosUnicos.size;
 }
 
 function obtenerTecnologiasEstudiante(data) {
   const tecnologiasSet = new Set();
-  
+
   data.Integrante_Equipos.forEach(integrante => {
     integrante.equipo.Historial_Proyectos.forEach(historial => {
       if (historial.proyecto?.tecnologias) {
         const techs = historial.proyecto.tecnologias
           .split(',')
           .map(tech => tech.trim());
-        
+
         techs.forEach(tech => tecnologiasSet.add(tech));
       }
     });
   });
-  
-  return Array.from(tecnologiasSet); 
+
+  return Array.from(tecnologiasSet);
 }
 
 function obtenerLineasEstudiante(data) {
   const lineasSet = new Set();
-  
+
   data.Integrante_Equipos.forEach(integrante => {
     integrante.equipo.Historial_Proyectos.forEach(historial => {
       if (historial.proyecto?.linea_investigacion) {
@@ -461,27 +464,27 @@ function obtenerLineasEstudiante(data) {
         const techs = historial.proyecto.linea_investigacion
           .split(',')
           .map(tech => tech.trim());
-        
+
         // Agregar cada tecnología al Set
         techs.forEach(tech => lineasSet.add(tech));
       }
     });
   });
-  
+
   return Array.from(lineasSet);
 }
 
 function obtenerProyectosPorPeriodo(data) {
   const periodos = {};
   const proyectosVistos = new Set();
-  
+
   data.Integrante_Equipos?.forEach(integrante => {
     const equipo = integrante.equipo;
-    
+
     if (!equipo) return;
-    
+
     const clavePeriodo = `${equipo.anio}-${equipo.periodo}`;
-    
+
     // Inicializar el periodo si no existe
     if (!periodos[clavePeriodo]) {
       periodos[clavePeriodo] = {
@@ -490,18 +493,18 @@ function obtenerProyectosPorPeriodo(data) {
         proyectos: []
       };
     }
-    
+
     // Recorrer los proyectos del equipo
     equipo.Historial_Proyectos?.forEach(historial => {
       const proyecto = historial.proyecto;
-      
+
       if (proyecto) {
         // Crear una clave única para evitar duplicados en el mismo periodo
         const claveProyecto = `${clavePeriodo}-${proyecto.id_proyecto}`;
-        
+
         if (!proyectosVistos.has(claveProyecto)) {
           proyectosVistos.add(claveProyecto);
-          
+
           periodos[clavePeriodo].proyectos.push({
             id_proyecto: proyecto.id_proyecto,
             titulo: proyecto.Idea?.titulo || "Sin título"
@@ -510,7 +513,7 @@ function obtenerProyectosPorPeriodo(data) {
       }
     });
   });
-  
+
   // Convertir el objeto a array y ordenar por año y periodo
   return Object.values(periodos).sort((a, b) => {
     if (a.anio !== b.anio) return b.anio - a.anio;
@@ -529,7 +532,7 @@ async function generarResumenPreferenciasEstudiante(infoBasica) {
     const proyectosPorPeriodo = obtenerProyectosPorPeriodo(infoBasica);
     const vecesLider = infoBasica.Integrante_Equipos.filter(eq => eq.es_lider).length;
     const vecesIntegrante = infoBasica.Integrante_Equipos.filter(eq => !eq.es_lider).length;
-    
+
     const prompt = `Eres un analista académico. Genera un resumen profesional y conciso sobre las preferencias académicas del estudiante basándote en la siguiente información:
 
 Estudiante: ${infoBasica.nombre}
@@ -539,9 +542,9 @@ Rol como líder: ${vecesLider} veces
 Rol como integrante: ${vecesIntegrante} veces
 
 Proyectos desarrollados:
-${proyectosPorPeriodo.map(p => 
-  `${p.proyectos.map(proj => `- ${proj.titulo} (${proj.linea_investigacion})`).join('\n')}`
-).join('\n')}
+${proyectosPorPeriodo.map(p =>
+      `${p.proyectos.map(proj => `- ${proj.titulo} (${proj.linea_investigacion})`).join('\n')}`
+    ).join('\n')}
 
 Genera ÚNICAMENTE un resumen de máximo 2 párrafos que describa:
 1. Las tecnologías utilizadas y el enfoque técnico del estudiante
@@ -575,12 +578,12 @@ function generarResumenSimple(infoBasica) {
   const proyectosPorPeriodo = obtenerProyectosPorPeriodo(infoBasica);
   const vecesLider = infoBasica.Integrante_Equipos.filter(eq => eq.es_lider).length;
   const vecesIntegrante = infoBasica.Integrante_Equipos.filter(eq => !eq.es_lider).length;
-  
+
   const tecsPrincipales = tecnologias.slice(0, 5).join(', ');
-  const lineasTexto = lineas.length > 1 
+  const lineasTexto = lineas.length > 1
     ? lineas.slice(0, -1).join(', ') + ' y ' + lineas[lineas.length - 1]
     : lineas[0];
-  
+
   let roleInfo = '';
   if (vecesLider > vecesIntegrante) {
     roleInfo = `principalmente como líder (${vecesLider} veces)`;
@@ -589,11 +592,11 @@ function generarResumenSimple(infoBasica) {
   } else {
     roleInfo = `manteniendo equilibrio entre líder e integrante (${vecesLider} veces cada uno)`;
   }
-  
-  const periodoTexto = proyectosPorPeriodo.length > 1 
-    ? 'proyectos académicos a lo largo de varios semestres' 
+
+  const periodoTexto = proyectosPorPeriodo.length > 1
+    ? 'proyectos académicos a lo largo de varios semestres'
     : 'proyectos académicos';
-  
+
   return `El estudiante ha desarrollado ${periodoTexto}, mostrando una mayor frecuencia de uso de tecnologías como ${tecsPrincipales}. A partir del registro histórico, se observa una preferencia por proyectos orientados a ${lineasTexto}.
 
 En cuanto a los roles desempeñados, el estudiante ha participado ${roleInfo}. Esta información permite identificar cómo ha evolucionado su participación de acuerdo con cada semestre.`;
