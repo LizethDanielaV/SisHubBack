@@ -377,7 +377,7 @@ async function informacionPerfilUsuario(codigo) {
                     attributes: ["id_proyecto", "tecnologias", "linea_investigacion"],
                     include: [{
                       model: Idea,
-                      attributes: ["titulo"]
+                      attributes: ["titulo", "objetivo_general"]
                     }]
                   }]
                 },
@@ -507,7 +507,8 @@ function obtenerProyectosPorPeriodo(data) {
 
           periodos[clavePeriodo].proyectos.push({
             id_proyecto: proyecto.id_proyecto,
-            titulo: proyecto.Idea?.titulo || "Sin título"
+            titulo: proyecto.Idea?.titulo || "Sin título",
+            objetivo_general: proyecto.Idea?.objetivo_general || "Sin objetivo general",
           });
         }
       }
