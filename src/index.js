@@ -4,6 +4,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
+
+import { swaggerUi, swaggerSpec } from "./config/swagger.js";
+
 // Importar rutas
 import usuarioRoutes from "./routes/usuarios.js";
 import areaRoutes from "./routes/areas.js";
@@ -18,6 +21,7 @@ import EntregableRoutes from "./routes/EntregableRoutes.js";
 import ProyectoRoutes from "./routes/ProyectoRoutes.js";
 import progress from "./routes/progress.js";
 import NotificacionesRoutes from "./routes/NotificacionesRouter.js";
+import DashboardRoutes from "./routes/DashboardRoutes.js";
 
 dotenv.config();
 
@@ -63,6 +67,15 @@ async function actualizarTabla() {
 
 actualizarTabla();*/
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "API Dashboard - Documentación"
+}));
+
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
 
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
@@ -78,10 +91,14 @@ app.use("/api/ideas", IdeaRoutes);
 app.use("/api/entregables", EntregableRoutes);
 app.use("/api/proyectos", ProyectoRoutes);
 app.use("/api/notificaciones", NotificacionesRoutes);
+app.use("/api/dashboard", DashboardRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
-  res.send("API funcionando 🚀");
+  res.send(`
+    <h1>🚀 API funcionando</h1>
+    <p><a href="/api-docs">📖 Ver Documentación Swagger</a></p>
+  `);
 });
 
 
@@ -91,5 +108,6 @@ const PORT = process.env.PORT || process.env.PUERTO || 3000;
 // Levantar servidor
 app.listen(PORT, () => {
   console.log(`API escuchando en http://localhost:${PORT}`);
+  console.log(`📖 Documentación Swagger: http://localhost:${PORT}/api-docs`);
 });
 
