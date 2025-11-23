@@ -301,14 +301,79 @@ async function listarDocentes() {
 
 async function listarEstudiantes() {
   try {
-    const docentes = await Usuario.findAll({
+    const estudiantes = await Usuario.findAll({
       where: { id_rol: '3' },
-      attributes: ['codigo', 'nombre', 'correo']
+      attributes: ['codigo', 'nombre', 'correo'],
+      include: [
+        {
+          model: IntegranteEquipo,
+          include: [
+            {
+              model: Equipo,
+              include: [
+                {
+                  model: HistorialProyecto,
+                  include: [{
+                    model: Proyecto,
+                    attributes: ["id_proyecto", "tecnologias", "linea_investigacion"],
+                    include: [{
+                      model: Idea,
+                      attributes: ["titulo", "objetivo_general"]
+                    }]
+                  }]
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
-    return docentes;
+    
+ // Procesar cada estudiante para extraer la información requerida
+    const estudiantesConInfo = estudiantes.map(estudiante => {
+      // Extraer tecnologías usando tu función existente
+      const tecnologias = obtenerTecnologiasEstudiante(estudiante);
+      
+      // Extraer líneas de investigación usando tu función existente
+      const lineasInvestigacion = obtenerLineasEstudiante(estudiante);
+      
+      // Extraer roles (líder o no)
+      const roles = obtenerRolesEstudiante(estudiante);
+
+      return {
+        codigo: estudiante.codigo,
+        nombre: estudiante.nombre,
+        correo: estudiante.correo,
+        tecnologias: tecnologias,
+        lineasInvestigacion: lineasInvestigacion,
+        roles: roles
+      };
+    });
+
+    return estudiantesConInfo;
   } catch (error) {
-    throw new Error("Error al listar docentes: " + error.message);
+    throw new Error("Error al listar estudiantes: " + error.message);
   }
+}
+
+// Función auxiliar para extraer roles
+function obtenerRolesEstudiante(data) {
+  const rolesInfo = {
+    esLider: false,
+    cantidadVecesLider: 0,
+    cantidadVecesMiembro: 0
+  };
+
+  data.Integrante_Equipos.forEach(integrante => {
+    if (integrante.es_lider) {
+      rolesInfo.esLider = true;
+      rolesInfo.cantidadVecesLider++;
+    } else {
+      rolesInfo.cantidadVecesMiembro++;
+    }
+  });
+
+  return rolesInfo;
 }
 
 async function buscarEstudiantePorCodigo(codigo) {
@@ -423,6 +488,7 @@ async function informacionPerfilUsuario(codigo) {
     throw error;
   }
 }
+
 function contarProyectosEstudiante(data) {
   const proyectosUnicos = new Set();
 
@@ -644,7 +710,7 @@ En cuanto a los roles desempeñados, el estudiante ha participado ${roleInfo}. E
 async function probarInformacionPerfil() {
   try {
     const codigo = "1552220"; // Cambia por el código que quieras probar
-    const resultado = await informacionPerfilUsuario(codigo);
+    const resultado = await listarEstudiantes();
     console.log(resultado);
   } catch (error) {
     console.error("Error:", error);
