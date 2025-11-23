@@ -28,7 +28,7 @@ router.patch("/:codigo/estado", verificarToken, verificarRol([1]), cambiarEstado
 router.patch("/:codigo/aprobar", verificarToken, verificarRol([1]), aprobarPostulacion);
 router.patch("/:codigo/rechazar", verificarToken, verificarRol([1]), rechazarPostulacion);
 router.get("/docentes", verificarToken, verificarRol([1]), listarDocentes);
-router.get("/estudiantes", verificarToken, verificarRol([1]), listarEstudiantes);
+router.get("/estudiantes", /*verificarToken, verificarRol([1]),*/ listarEstudiantes);
 router.get("/estudiantes/:codigo", verificarToken, verificarRol([1]), buscarEstudiantePorCodigo);
 router.get("/informacion/perfil/:codigo", /*verificarToken, verificarRol([1])*/ informacionPerfil);
 export default router;

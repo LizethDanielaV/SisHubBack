@@ -303,7 +303,7 @@ async function listarEstudiantes() {
   try {
     const estudiantes = await Usuario.findAll({
       where: { id_rol: '3' },
-      attributes: ['codigo', 'nombre', 'correo'],
+      attributes: ['codigo', 'nombre', 'correo', "uid_firebase"],
       include: [
         {
           model: IntegranteEquipo,
@@ -330,25 +330,35 @@ async function listarEstudiantes() {
     });
     
  // Procesar cada estudiante para extraer la información requerida
-    const estudiantesConInfo = estudiantes.map(estudiante => {
-      // Extraer tecnologías usando tu función existente
-      const tecnologias = obtenerTecnologiasEstudiante(estudiante);
-      
-      // Extraer líneas de investigación usando tu función existente
-      const lineasInvestigacion = obtenerLineasEstudiante(estudiante);
-      
-      // Extraer roles (líder o no)
-      const roles = obtenerRolesEstudiante(estudiante);
+    // USAR Promise.all() para manejar operaciones asíncronas dentro del map
+    const estudiantesConInfo = await Promise.all(
+      estudiantes.map(async (estudiante) => {
+        // Convertir a JSON plano
+        const estudianteJSON = estudiante.toJSON();
+        
+        // Extraer tecnologías usando tu función existente
+        const tecnologias = obtenerTecnologiasEstudiante(estudianteJSON);
+        
+        // Extraer líneas de investigación usando tu función existente
+        const lineasInvestigacion = obtenerLineasEstudiante(estudianteJSON);
+        
+        // Extraer roles (líder o no)
+        const roles = obtenerRolesEstudiante(estudianteJSON);
 
-      return {
-        codigo: estudiante.codigo,
-        nombre: estudiante.nombre,
-        correo: estudiante.correo,
-        tecnologias: tecnologias,
-        lineasInvestigacion: lineasInvestigacion,
-        roles: roles
-      };
-    });
+        // Obtener foto de perfil (operación asíncrona)
+        const fotoPerfil = await obtenerFotoPerfil(estudianteJSON.uid_firebase);
+        
+        return {
+          codigo: estudianteJSON.codigo,
+          nombre: estudianteJSON.nombre,
+          correo: estudianteJSON.correo,
+          tecnologias: tecnologias,
+          lineasInvestigacion: lineasInvestigacion,
+          roles: roles,
+          fotoPerfil: fotoPerfil.success ? fotoPerfil.photoURL : null
+        };
+      })
+    );
 
     return estudiantesConInfo;
   } catch (error) {
@@ -709,15 +719,16 @@ En cuanto a los roles desempeñados, el estudiante ha participado ${roleInfo}. E
 
 async function probarInformacionPerfil() {
   try {
-    const codigo = "1552220"; // Cambia por el código que quieras probar
-    const resultado = await listarEstudiantes();
+    const codigo = "1552220"; 
+    //const resultado = await listarEstudiantes();
+    const resultado = await listarEstudiantes()
     console.log(resultado);
   } catch (error) {
     console.error("Error:", error);
   }
 }
 
-probarInformacionPerfil();
+//probarInformacionPerfil();
 
 
 export default { buscarEstudiantePorCodigo, listarEstudiantes, listarDocentes, obtenerFotoPerfil, cargarDocentesMasivamente, informacionPerfilUsuario };
