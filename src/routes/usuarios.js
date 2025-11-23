@@ -13,7 +13,8 @@ import {
     listarEstudiantes,
     registrarUsuario,
     obtenerUsuarioPorUid, 
-    informacionPerfil
+    informacionPerfil, 
+    descargarPerfilPDF
 } from "../controllers/usuarioController.js";
 
 const router = express.Router();
@@ -31,4 +32,5 @@ router.get("/docentes", verificarToken, verificarRol([1]), listarDocentes);
 router.get("/estudiantes", /*verificarToken, verificarRol([1]),*/ listarEstudiantes);
 router.get("/estudiantes/:codigo", verificarToken, verificarRol([1]), buscarEstudiantePorCodigo);
 router.get("/informacion/perfil/:codigo", /*verificarToken, verificarRol([1])*/ informacionPerfil);
+router.get("/informacion/perfil/:codigo/pdf", /*verificarToken, verificarRol([1])*/ descargarPerfilPDF);
 export default router;

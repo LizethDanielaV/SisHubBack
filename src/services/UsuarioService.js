@@ -11,6 +11,9 @@ import HistorialProyecto from '../models/HistorialProyecto.js';
 import Idea from '../models/Idea.js';
 import Groq from 'groq-sdk';
 import dotenv from "dotenv";
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
 
 async function cargarDocentesMasivamente(docentes, progressId = null) {
   const resultados = {
@@ -730,5 +733,214 @@ async function probarInformacionPerfil() {
 
 //probarInformacionPerfil();
 
+async function generarPDFPerfilUsuario(codigo, res) {
+  try {
+    // Obtener datos del estudiante
+    const datosEstudiante = await informacionPerfilUsuario(codigo);
+    
+    // Crear documento PDF
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    
+    // Configurar headers para descarga
+    const nombreArchivo = `perfil_${codigo}_${Date.now()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+    
+    // Pipe el PDF directamente al response
+    doc.pipe(res);
 
-export default { buscarEstudiantePorCodigo, listarEstudiantes, listarDocentes, obtenerFotoPerfil, cargarDocentesMasivamente, informacionPerfilUsuario };
+    // ===== ENCABEZADO =====
+    doc.fontSize(20)
+       .fillColor('#2c3e50')
+       .text(datosEstudiante.nombre.toUpperCase(), 50, 50);
+    
+    doc.fontSize(12)
+       .fillColor('#7f8c8d')
+       .text(datosEstudiante.correo, 50, 80);
+
+    // Información básica
+    doc.fontSize(10)
+       .fillColor('#34495e')
+       .text(`Código: ${datosEstudiante.codigo}`, 50, 110)
+       .text(`Documento: ${datosEstudiante.documento}`, 250, 110);
+
+    // Métricas principales
+    doc.fontSize(11)
+       .fillColor('#2c3e50')
+       .text('TOTAL DE PROYECTOS REALIZADOS', 50, 140)
+       .fontSize(16)
+       .fillColor('#3498db')
+       .text(datosEstudiante.cantidadProyectos.toString(), 50, 160);
+
+    doc.fontSize(11)
+       .fillColor('#2c3e50')
+       .text('Número de veces siendo líder', 320, 140)
+       .fontSize(16)
+       .fillColor('#3498db')
+       .text(datosEstudiante.cantidadVecesLider.toString(), 320, 160);
+
+    // Línea divisoria
+    doc.moveTo(50, 200)
+       .lineTo(545, 200)
+       .strokeColor('#bdc3c7')
+       .lineWidth(1)
+       .stroke();
+
+    // ===== TECNOLOGÍAS USADAS =====
+    let yPos = 220;
+    doc.fontSize(14)
+       .fillColor('#2c3e50')
+       .text('Tecnologías usadas', 50, yPos);
+
+    yPos += 25;
+    const maxBarWidth = 120;
+    const maxCantidad = Math.max(...datosEstudiante.tecnologias.map(t => t.cantidad), 1);
+
+    datosEstudiante.tecnologias.slice(0, 6).forEach((tech) => {
+      const barWidth = (tech.cantidad / maxCantidad) * maxBarWidth;
+      
+      // Nombre de la tecnología
+      doc.fontSize(10)
+         .fillColor('#34495e')
+         .text(tech.tecnologia, 50, yPos + 2);
+
+      // Barra de progreso (fondo)
+      doc.rect(180, yPos, maxBarWidth, 12)
+         .fillColor('#ecf0f1')
+         .fill();
+
+      // Barra de progreso (valor)
+      doc.rect(180, yPos, barWidth, 12)
+         .fillColor('#3498db')
+         .fill();
+
+      // Cantidad
+      doc.fillColor('#7f8c8d')
+         .fontSize(9)
+         .text(tech.cantidad.toString(), 310, yPos + 2);
+
+      yPos += 20;
+    });
+
+    // ===== LÍNEAS DE INVESTIGACIÓN =====
+    yPos += 15;
+    doc.fontSize(14)
+       .fillColor('#2c3e50')
+       .text('Líneas de investigación', 50, yPos);
+
+    yPos += 20;
+    const colores = ['#3498db', '#e74c3c', '#9b59b6', '#f39c12', '#1abc9c', '#e67e22'];
+    const xInicio = 50;
+    
+    datosEstudiante.lineasInvestigacion.forEach((linea, index) => {
+      const xPos = xInicio + (index % 3) * 165; // 3 columnas
+      const yPosLinea = yPos + Math.floor(index / 3) * 35;
+      
+      // Fondo del badge
+      doc.roundedRect(xPos, yPosLinea, 150, 25, 5)
+         .fillColor(colores[index % colores.length])
+         .fill();
+      
+      // Texto del badge
+      doc.fontSize(9)
+         .fillColor('#ffffff')
+         .text(linea, xPos + 5, yPosLinea + 8, { 
+           width: 140, 
+           align: 'center' 
+         });
+    });
+
+    // Calcular nuevo yPos después de las líneas
+    const filasLineas = Math.ceil(datosEstudiante.lineasInvestigacion.length / 3);
+    yPos += (filasLineas * 35) + 20;
+
+    // ===== PROYECTOS POR SEMESTRE =====
+    // Verificar si hay espacio, si no, nueva página
+    if (yPos > 650) {
+      doc.addPage();
+      yPos = 50;
+    }
+
+    doc.fontSize(14)
+       .fillColor('#2c3e50')
+       .text('Proyectos por semestre', 50, yPos);
+
+    yPos += 20;
+    
+    datosEstudiante.proyectosPeriodo.forEach((periodo) => {
+      // Verificar espacio para nuevo periodo
+      if (yPos > 700) {
+        doc.addPage();
+        yPos = 50;
+      }
+
+      doc.fontSize(11)
+         .fillColor('#7f8c8d')
+         .text(`${periodo.anio}-${periodo.periodo}`, 50, yPos);
+
+      yPos += 18;
+      
+      periodo.proyectos.forEach((proyecto) => {
+        // Verificar espacio
+        if (yPos > 720) {
+          doc.addPage();
+          yPos = 50;
+        }
+
+        // Fondo del proyecto
+        doc.rect(70, yPos - 2, 470, 20)
+           .fillColor('#f8f9fa')
+           .fill();
+
+        doc.fontSize(9)
+           .fillColor('#34495e')
+           .text(`• ${proyecto.titulo}`, 75, yPos + 3, { 
+             width: 460,
+             ellipsis: true 
+           });
+        
+        yPos += 22;
+      });
+
+      yPos += 8;
+    });
+
+    // ===== RESUMEN =====
+    // Verificar espacio
+    if (yPos > 600) {
+      doc.addPage();
+      yPos = 50;
+    }
+
+    yPos += 10;
+    doc.fontSize(14)
+       .fillColor('#2c3e50')
+       .text('Resumen', 50, yPos);
+
+    yPos += 20;
+    
+    // Caja de resumen
+    const resumenHeight = 150;
+    doc.rect(50, yPos, 495, resumenHeight)
+       .fillColor('#f8f9fa')
+       .fill();
+
+    doc.fontSize(9)
+       .fillColor('#34495e')
+       .text(datosEstudiante.resumenPerfil, 60, yPos + 10, { 
+         width: 475, 
+         align: 'justify',
+         lineGap: 3,
+         height: resumenHeight - 20
+       });
+
+    // Finalizar documento
+    doc.end();
+
+    return true;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export default { buscarEstudiantePorCodigo, listarEstudiantes, listarDocentes, obtenerFotoPerfil, cargarDocentesMasivamente, informacionPerfilUsuario, generarPDFPerfilUsuario };
