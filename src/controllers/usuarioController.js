@@ -471,3 +471,22 @@ export async function informacionPerfil(req, res) {
   }
 }
 
+export async function descargarPerfilPDF(req, res) {
+  try {
+    const { codigo } = req.params;
+    
+    // Esta función maneja el response directamente
+    await UsuarioService.generarPDFPerfilUsuario(codigo, res);
+    
+  } catch (error) {
+    console.error('Error al generar PDF:', error);
+    
+    // Si el response ya fue enviado, no podemos enviar JSON
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        message: "Error al generar PDF del perfil", 
+        error: error.message 
+      });
+    }
+  }
+}
