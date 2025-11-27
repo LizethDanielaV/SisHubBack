@@ -608,7 +608,7 @@ async function exportarProyectosPDF(req, res) {
       fechaInicio,
       fechaFin,
       anio: parseInt(anio),
-      periodo: parseInt(periodo)
+      periodo: periodo
     });
 
     if (data.length === 0)
