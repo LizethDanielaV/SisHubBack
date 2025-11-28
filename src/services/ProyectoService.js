@@ -1942,9 +1942,15 @@ async function exportarProyectos({ tipo, fechaInicio, fechaFin, anio, periodo })
         if (tipo === "fecha") {
             if (!fechaInicio || !fechaFin)
                 throw new Error("Debe proporcionar fechaInicio y fechaFin");
+            const [yearInicio, monthInicio, dayInicio] = fechaInicio.split('-').map(Number);
+            const [yearFin, monthFin, dayFin] = fechaFin.split('-').map(Number);
+
+            // Crear fechas en UTC para que coincidan con la BD
+            const inicio = new Date(Date.UTC(yearInicio, monthInicio - 1, dayInicio, 0, 0, 0, 0));
+            const fin = new Date(Date.UTC(yearFin, monthFin - 1, dayFin, 23, 59, 59, 999));
 
             where.fecha_subida = {
-                [Op.between]: [new Date(fechaInicio), new Date(fechaFin)]
+                [Op.between]: [inicio, fin]
             };
         }
 
@@ -2034,7 +2040,17 @@ async function exportarProyectos({ tipo, fechaInicio, fechaFin, anio, periodo })
 
             const fila = mapa.get(key);
             fila.urls_entregables.push(ent.url_archivo);
-            fila.fechas_subida.push(ent.fecha_subida);
+            const fechaRaw = ent.getDataValue('fecha_subida');
+
+            if (fechaRaw) {
+                const fecha = new Date(fechaRaw);
+                const year = fecha.getUTCFullYear();
+                const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(fecha.getUTCDate()).padStart(2, '0');
+                fila.fechas_subida.push(`${year}-${month}-${day}`);
+            } else {
+                fila.fechas_subida.push("Sin fecha");
+            }
         }
 
         return [...mapa.values()];
