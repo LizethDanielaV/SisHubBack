@@ -1937,123 +1937,172 @@ async function getSemesterByTech() {
 
 async function exportarProyectos({ tipo, fechaInicio, fechaFin, anio, periodo }) {
     try {
-        let where = {};
+        let whereProyecto = {};
+        let whereEntregable = {};
 
         if (tipo === "fecha") {
             if (!fechaInicio || !fechaFin)
                 throw new Error("Debe proporcionar fechaInicio y fechaFin");
+
             const [yearInicio, monthInicio, dayInicio] = fechaInicio.split('-').map(Number);
             const [yearFin, monthFin, dayFin] = fechaFin.split('-').map(Number);
 
-            // Crear fechas en UTC para que coincidan con la BD
             const inicio = new Date(Date.UTC(yearInicio, monthInicio - 1, dayInicio, 0, 0, 0, 0));
             const fin = new Date(Date.UTC(yearFin, monthFin - 1, dayFin, 23, 59, 59, 999));
 
-            where.fecha_subida = {
+            whereEntregable.fecha_subida = {
                 [Op.between]: [inicio, fin]
             };
         }
 
-        const entregables = await Entregable.findAll({
-            where,
+        // Primero obtener los proyectos
+        const proyectos = await Proyecto.findAll({
+            where: whereProyecto,
             include: [
-                { model: Proyecto, include: [{ model: Idea }] },
-                { model: Equipo },
                 {
-                    model: Actividad,
-                    include: [{ model: TipoAlcance, attributes: ["nombre"] }]
+                    model: Idea,
+                    attributes: ['titulo', 'problema', 'justificacion', 'objetivo_general', 'objetivos_especificos']
+                },
+                {
+                    model: TipoAlcance,
+                    attributes: ['nombre']
+                },
+                {
+                    model: Entregable,
+                    where: tipo === "fecha" ? whereEntregable : undefined,
+                    required: tipo === "fecha",
+                    include: [
+                        {
+                            model: Equipo
+                        },
+                        {
+                            model: Actividad,
+                            include: [{ model: TipoAlcance, attributes: ["nombre"] }]
+                        }
+                    ]
                 }
             ]
         });
 
-        if (entregables.length === 0) return [];
+        if (proyectos.length === 0) return [];
 
-        let filtrados = entregables;
+        const resultados = [];
 
-        if (tipo === "semestre") {
-            console.log("Filtrando por semestre:", anio, periodo);
+        for (const proyecto of proyectos) {
+            const idea = proyecto.Idea;
 
-            if (!anio || !periodo)
-                throw new Error("Debe proporcionar anio y periodo");
+            // Filtrar entregables por semestre si es necesario
+            let entregablesFiltrados = proyecto.entregables;
 
-            filtrados = filtrados.filter(e => {
-                return (
-                    String(e.equipo.anio) === String(anio) &&
-                    String(e.equipo.periodo) === String(periodo)
-                );
-            });
+            if (tipo === "semestre") {
+                if (!anio || !periodo)
+                    throw new Error("Debe proporcionar anio y periodo");
 
-            console.log("TOTAL FILTRADOS:", filtrados.length);
-        }
-
-
-        const mapa = new Map();
-
-        for (const ent of filtrados) {
-            const proyecto = ent.proyecto;
-            const idea = proyecto?.Idea;
-            const equipo = ent.equipo;
-
-            const grupo = await Grupo.findOne({
-                where: {
-                    codigo_materia: equipo.codigo_materia,
-                    nombre: equipo.nombre,
-                    periodo: equipo.periodo,
-                    anio: equipo.anio
-                }
-            });
-
-            const grupoStr = grupo
-                ? `${grupo.codigo_materia}-${grupo.nombre}-${grupo.periodo}-${grupo.anio}`
-                : "No encontrado";
-
-            const integrantes = await IntegranteEquipo.findAll({
-                where: { id_equipo: equipo.id_equipo },
-                include: [{ model: Usuario }]
-            });
-
-            const listaIntegrantes = integrantes.map(i =>
-                `${i.Usuario.codigo} - ${i.Usuario.nombre}`
-            );
-
-            const tipo_alcance = ent.actividad?.Tipo_alcance?.nombre || "Sin tipo";
-
-            const key = `${proyecto.id_proyecto}-${equipo.id_equipo}-${tipo_alcance}`;
-
-            if (!mapa.has(key)) {
-                mapa.set(key, {
-                    titulo: idea?.titulo || "",
-                    problema: idea?.problema || "",
-                    justificacion: idea?.justificacion || "",
-                    objetivo_general: idea?.objetivo_general || "",
-                    objetivos_especificos: idea?.objetivos_especificos || "",
-                    linea_investigacion: proyecto?.linea_investigacion || "",
-                    tecnologias: proyecto?.tecnologias || "",
-                    palabras_clave: proyecto?.palabras_clave || "",
-                    tipo_alcance,
-                    grupo: grupoStr,
-                    equipo: listaIntegrantes.join(", "),
-                    urls_entregables: [],
-                    fechas_subida: []
+                entregablesFiltrados = entregablesFiltrados.filter(ent => {
+                    const equipo = ent.equipo;
+                    return String(equipo.anio) === String(anio) &&
+                        String(equipo.periodo) === String(periodo);
                 });
             }
 
-            const fila = mapa.get(key);
-            fila.urls_entregables.push(ent.url_archivo);
-            const fechaRaw = ent.getDataValue('fecha_subida');
+            if (entregablesFiltrados.length === 0) continue;
 
-            if (fechaRaw) {
-                const fecha = new Date(fechaRaw);
-                const year = fecha.getUTCFullYear();
-                const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(fecha.getUTCDate()).padStart(2, '0');
-                fila.fechas_subida.push(`${year}-${month}-${day}`);
-            } else {
-                fila.fechas_subida.push("Sin fecha");
+            // Agrupar entregables por grupo
+            const gruposMap = new Map();
+
+            for (const entregable of entregablesFiltrados) {
+                const equipo = entregable.equipo;
+                const grupoKey = `${equipo.codigo_materia}-${equipo.nombre}-${equipo.periodo}-${equipo.anio}`;
+
+                if (!gruposMap.has(grupoKey)) {
+                    // Buscar el grupo en la BD
+                    const grupo = await Grupo.findOne({
+                        where: {
+                            codigo_materia: equipo.codigo_materia,
+                            nombre: equipo.nombre,
+                            periodo: equipo.periodo,
+                            anio: equipo.anio
+                        }
+                    });
+
+                    gruposMap.set(grupoKey, {
+                        grupo: grupo ? `${grupo.codigo_materia}-${grupo.nombre}-${grupo.periodo}-${grupo.anio}` : grupoKey,
+                        equipos: new Map()
+                    });
+                }
+
+                const grupoData = gruposMap.get(grupoKey);
+                const equipoKey = equipo.id_equipo;
+
+                // Agrupar por equipo dentro del grupo
+                if (!grupoData.equipos.has(equipoKey)) {
+                    // Obtener integrantes del equipo
+                    const integrantes = await IntegranteEquipo.findAll({
+                        where: { id_equipo: equipo.id_equipo },
+                        include: [{ model: Usuario }]
+                    });
+
+                    const listaIntegrantes = integrantes.map(i =>
+                        `${i.Usuario.codigo} - ${i.Usuario.nombre}`
+                    );
+
+                    grupoData.equipos.set(equipoKey, {
+                        equipo: listaIntegrantes.join(", "),
+                        entregables: []
+                    });
+                }
+
+                const equipoData = grupoData.equipos.get(equipoKey);
+
+                // Agregar entregable con su fecha
+                const fechaRaw = entregable.getDataValue('fecha_subida');
+                let fechaFormateada = "Sin fecha";
+
+                if (fechaRaw) {
+                    const fecha = new Date(fechaRaw);
+                    const year = fecha.getUTCFullYear();
+                    const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(fecha.getUTCDate()).padStart(2, '0');
+                    fechaFormateada = `${year}-${month}-${day}`;
+                }
+
+                equipoData.entregables.push({
+                    url: entregable.url_archivo,
+                    fecha: fechaFormateada
+                });
             }
+
+            // Construir la estructura del proyecto con sus grupos
+            const grupos = [];
+            for (const [grupoKey, grupoData] of gruposMap) {
+                const equipos = [];
+                for (const [equipoKey, equipoData] of grupoData.equipos) {
+                    equipos.push({
+                        equipo: equipoData.equipo,
+                        entregables: equipoData.entregables
+                    });
+                }
+                grupos.push({
+                    grupo: grupoData.grupo,
+                    equipos: equipos
+                });
+            }
+
+            resultados.push({
+                titulo: idea?.titulo || "",
+                problema: idea?.problema || "",
+                justificacion: idea?.justificacion || "",
+                objetivo_general: idea?.objetivo_general || "",
+                objetivos_especificos: idea?.objetivos_especificos || "",
+                linea_investigacion: proyecto.linea_investigacion || "",
+                tecnologias: proyecto.tecnologias || "",
+                palabras_clave: proyecto.palabras_clave || "",
+                tipo_alcance: proyecto.Tipo_alcance?.nombre || "Sin tipo",
+                grupos: grupos // Array de grupos, cada uno con sus equipos y entregables
+            });
         }
 
-        return [...mapa.values()];
+        return resultados;
 
     } catch (error) {
         throw new Error("Error al exportar proyectos: " + error.message);

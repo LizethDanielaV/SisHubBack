@@ -526,15 +526,8 @@ async function exportarProyectosExcel(req, res) {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Proyectos");
 
-    // Determinar cuántas columnas URL necesitamos
-    const maxUrls = Math.max(
-      ...data.map(x => x.urls_entregables.length)
-    );
-
-    // Crear columnas base
-    const columnas = [
-      { header: "Grupo", key: "grupo", width: 25 },
-      { header: "Equipo", key: "equipo", width: 40 },
+    // Columnas del Excel
+    sheet.columns = [
       { header: "Título", key: "titulo", width: 30 },
       { header: "Problema", key: "problema", width: 30 },
       { header: "Justificación", key: "justificacion", width: 30 },
@@ -544,40 +537,56 @@ async function exportarProyectosExcel(req, res) {
       { header: "Tecnologías", key: "tecnologias", width: 25 },
       { header: "Palabras Clave", key: "palabras_clave", width: 25 },
       { header: "Tipo de Alcance", key: "tipo_alcance", width: 20 },
+      { header: "Grupo", key: "grupo", width: 30 },
+      { header: "Equipo", key: "equipo", width: 40 },
+      { header: "URL Entregable", key: "url_entregable", width: 60 },
+      { header: "Fecha Subida", key: "fecha_subida", width: 15 }
     ];
 
-    // Agregar columnas dinámicas para URL₁, URL₂, URL₃...
-    for (let i = 1; i <= maxUrls; i++) {
-      columnas.push({
-        header: `URL Entregable ${i}`,
-        key: `url_${i}`,
-        width: 60
-      });
-    }
+    // Procesar cada proyecto
+    data.forEach(proyecto => {
+      let primeraFila = true;
 
-    // Y columna para fecha
-    columnas.push({
-      header: "Fechas Subida (todas)",
-      key: "fechas_subida",
-      width: 30
+      proyecto.grupos.forEach(grupoData => {
+        grupoData.equipos.forEach(equipoData => {
+          equipoData.entregables.forEach(entregable => {
+            const fila = {
+              grupo: grupoData.grupo,
+              equipo: equipoData.equipo,
+              url_entregable: entregable.url,
+              fecha_subida: entregable.fecha
+            };
+
+            // Solo agregar los datos del proyecto en la primera fila
+            if (primeraFila) {
+              fila.titulo = proyecto.titulo;
+              fila.problema = proyecto.problema;
+              fila.justificacion = proyecto.justificacion;
+              fila.objetivo_general = proyecto.objetivo_general;
+              fila.objetivos_especificos = proyecto.objetivos_especificos;
+              fila.linea_investigacion = proyecto.linea_investigacion;
+              fila.tecnologias = proyecto.tecnologias;
+              fila.palabras_clave = proyecto.palabras_clave;
+              fila.tipo_alcance = proyecto.tipo_alcance;
+              primeraFila = false;
+            }
+
+            sheet.addRow(fila);
+          });
+        });
+      });
+
+      // Agregar una fila vacía entre proyectos para separación visual
+      sheet.addRow({});
     });
 
-    sheet.columns = columnas;
-
-    // Agregar cada fila
-    data.forEach(row => {
-      const fila = {
-        ...row,
-        fechas_subida: row.fechas_subida.join(" | ")
-      };
-
-      // Colocar las URLs dinámicas
-      row.urls_entregables.forEach((url, index) => {
-        fila[`url_${index + 1}`] = url;
-      });
-
-      sheet.addRow(fila);
-    });
+    // Aplicar estilos a los encabezados
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' }
+    };
 
     // ====================================
     // Respuesta del archivo
@@ -602,6 +611,12 @@ async function exportarProyectosExcel(req, res) {
 async function exportarProyectosPDF(req, res) {
   try {
     const { tipo, fechaInicio, fechaFin, anio, periodo } = req.query;
+
+    if (!tipo || !["fecha", "semestre", "todos"].includes(tipo)) {
+      return res.status(400).json({
+        error: "El tipo debe ser 'fecha', 'semestre' o 'todos'."
+      });
+    }
 
     const data = await ProyectoService.exportarProyectos({
       tipo,
@@ -635,87 +650,179 @@ async function exportarProyectosPDF(req, res) {
       {
         text: "REPORTE DE PROYECTOS",
         style: "tituloPrincipal",
-        margin: [0, 0, 0, 20]
+        margin: [0, 0, 0, 30]
       }
     ];
 
-    data.forEach((row, index) => {
+    data.forEach((proyecto, index) => {
+      // Título del proyecto
       contenido.push({
-        style: "card",
-        margin: [0, 0, 0, 20],
+        text: `PROYECTO #${index + 1}`,
+        style: "proyectoNumero",
+        margin: [0, 0, 0, 15]
+      });
+
+      // Información general del proyecto en tabla
+      const infoProyecto = [
+        [
+          { text: "Título", style: "labelTabla" },
+          { text: proyecto.titulo || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Problema", style: "labelTabla" },
+          { text: proyecto.problema || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Justificación", style: "labelTabla" },
+          { text: proyecto.justificacion || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Objetivo General", style: "labelTabla" },
+          { text: proyecto.objetivo_general || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Objetivos Específicos", style: "labelTabla" },
+          { text: proyecto.objetivos_especificos || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Línea de Investigación", style: "labelTabla" },
+          { text: proyecto.linea_investigacion || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Tecnologías", style: "labelTabla" },
+          { text: proyecto.tecnologias || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Palabras Clave", style: "labelTabla" },
+          { text: proyecto.palabras_clave || "N/A", style: "valorTabla" }
+        ],
+        [
+          { text: "Tipo de Alcance", style: "labelTabla" },
+          { text: proyecto.tipo_alcance || "N/A", style: "valorTabla" }
+        ]
+      ];
+
+      contenido.push({
         table: {
-          widths: ["100%"],
-          body: [
-            [
-              {
-                stack: [
-                  { text: `Proyecto #${index + 1}`, style: "cardTitulo" },
-
-                  {
-                    columns: [
-                      // COLUMNA 1
-                      [
-                        { text: "Grupo:", style: "campo" },
-                        { text: row.grupo, style: "valor" },
-
-                        { text: "\nEquipo:", style: "campo" },
-                        { text: row.equipo, style: "valor" },
-
-                        { text: "\nTítulo:", style: "campo" },
-                        { text: row.titulo, style: "valor" },
-
-                        { text: "\nProblema:", style: "campo" },
-                        { text: row.problema, style: "valor" },
-
-                        { text: "\nJustificación:", style: "campo" },
-                        { text: row.justificacion, style: "valor" },
-                      ],
-
-                      // COLUMNA 2
-                      [
-                        { text: "Objetivo General:", style: "campo" },
-                        { text: row.objetivo_general, style: "valor" },
-
-                        { text: "\nObjetivos Específicos:", style: "campo" },
-                        { text: row.objetivos_especificos, style: "valor" },
-
-                        { text: "\nLínea de Investigación:", style: "campo" },
-                        { text: row.linea_investigacion, style: "valor" },
-
-                        { text: "\nTecnologías:", style: "campo" },
-                        { text: row.tecnologias, style: "valor" },
-
-                        { text: "\nTipo de Alcance:", style: "campo" },
-                        { text: row.tipo_alcance, style: "valor" },
-
-                        { text: "\nEntregables:", style: "campo" },
-                        ...row.urls_entregables.map((u, i) => ({
-                          text: `• Entregable ${i + 1}: ${u}`,
-                          style: "valor"
-                        })),
-
-                        { text: "\nFechas de subida:", style: "campo" },
-                        {
-                          text: row.fechas_subida.join(" | "),
-                          style: "valor"
-                        }
-                      ]
-                    ]
-                  }
-                ]
-              }
-            ]
-          ]
+          widths: [150, "*"],
+          body: infoProyecto
         },
         layout: {
-          paddingLeft: () => 10,
-          paddingRight: () => 10,
-          paddingTop: () => 10,
-          paddingBottom: () => 10,
-          hLineColor: () => "#cccccc",
-          vLineColor: () => "#cccccc"
-        }
+          hLineWidth: () => 0.5,
+          vLineWidth: () => 0.5,
+          hLineColor: () => "#DDDDDD",
+          vLineColor: () => "#DDDDDD",
+          paddingLeft: () => 8,
+          paddingRight: () => 8,
+          paddingTop: () => 6,
+          paddingBottom: () => 6
+        },
+        margin: [0, 0, 0, 20]
       });
+
+      // Sección de grupos y equipos
+      contenido.push({
+        text: "GRUPOS Y EQUIPOS",
+        style: "seccionTitulo",
+        margin: [0, 10, 0, 10]
+      });
+
+      proyecto.grupos.forEach((grupoData, grupoIndex) => {
+        // Información del grupo
+        contenido.push({
+          table: {
+            widths: [80, "*"],
+            body: [
+              [
+                { text: "Grupo", style: "labelSecundario", fillColor: "#F0F0F0" },
+                { text: grupoData.grupo, style: "valorSecundario", fillColor: "#F0F0F0" }
+              ]
+            ]
+          },
+          layout: {
+            hLineWidth: () => 0.5,
+            vLineWidth: () => 0.5,
+            hLineColor: () => "#CCCCCC",
+            vLineColor: () => "#CCCCCC"
+          },
+          margin: [0, 5, 0, 5]
+        });
+
+        grupoData.equipos.forEach((equipoData, equipoIndex) => {
+          // Información del equipo
+          contenido.push({
+            table: {
+              widths: [80, "*"],
+              body: [
+                [
+                  { text: "Equipo", style: "labelSecundario" },
+                  { text: equipoData.equipo || "Sin integrantes", style: "valorSecundario" }
+                ]
+              ]
+            },
+            layout: {
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0.5,
+              hLineColor: () => "#DDDDDD",
+              vLineColor: () => "#DDDDDD"
+            },
+            margin: [10, 0, 0, 5]
+          });
+
+          // Tabla de entregables
+          const entregablesBody = [
+            [
+              { text: "#", style: "headerEntregables", fillColor: "#E8E8E8" },
+              { text: "URL del Entregable", style: "headerEntregables", fillColor: "#E8E8E8" },
+              { text: "Fecha", style: "headerEntregables", fillColor: "#E8E8E8" }
+            ]
+          ];
+
+          equipoData.entregables.forEach((entregable, entIndex) => {
+            entregablesBody.push([
+              { text: (entIndex + 1).toString(), style: "celdaEntregable" },
+              { text: entregable.url, style: "celdaEntregable" },
+              { text: entregable.fecha, style: "celdaEntregable" }
+            ]);
+          });
+
+          contenido.push({
+            table: {
+              widths: [30, "*", 70],
+              body: entregablesBody
+            },
+            layout: {
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0.5,
+              hLineColor: () => "#DDDDDD",
+              vLineColor: () => "#DDDDDD",
+              paddingLeft: () => 6,
+              paddingRight: () => 6,
+              paddingTop: () => 4,
+              paddingBottom: () => 4
+            },
+            margin: [20, 0, 0, 10]
+          });
+        });
+      });
+
+      // Línea separadora entre proyectos
+      if (index < data.length - 1) {
+        contenido.push({
+          canvas: [
+            {
+              type: "line",
+              x1: 0,
+              y1: 0,
+              x2: 515,
+              y2: 0,
+              lineWidth: 2,
+              lineColor: "#1D3557"
+            }
+          ],
+          margin: [0, 20, 0, 30]
+        });
+      }
     });
 
     // ================================
@@ -727,30 +834,49 @@ async function exportarProyectosPDF(req, res) {
       content: contenido,
       styles: {
         tituloPrincipal: {
-          fontSize: 22,
+          fontSize: 24,
           bold: true,
           color: "#1D3557",
           alignment: "center"
         },
-        card: {
-          fillColor: "#F7F7F7",
-          margin: [0, 10]
-        },
-        cardTitulo: {
+        proyectoNumero: {
           fontSize: 16,
           bold: true,
           color: "#457B9D",
-          margin: [0, 0, 0, 10]
+          alignment: "left"
         },
-        campo: {
-          fontSize: 11,
+        seccionTitulo: {
+          fontSize: 13,
           bold: true,
-          margin: [0, 4, 0, 0],
           color: "#1D3557"
         },
-        valor: {
-          fontSize: 11,
-          margin: [0, 0, 0, 6]
+        labelTabla: {
+          fontSize: 10,
+          bold: true,
+          color: "#1D3557"
+        },
+        valorTabla: {
+          fontSize: 10,
+          color: "#333333"
+        },
+        labelSecundario: {
+          fontSize: 10,
+          bold: true,
+          color: "#1D3557"
+        },
+        valorSecundario: {
+          fontSize: 10,
+          color: "#333333"
+        },
+        headerEntregables: {
+          fontSize: 9,
+          bold: true,
+          color: "#1D3557",
+          alignment: "center"
+        },
+        celdaEntregable: {
+          fontSize: 9,
+          color: "#333333"
         }
       }
     };
