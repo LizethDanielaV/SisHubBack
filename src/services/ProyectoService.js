@@ -17,6 +17,7 @@ import { Op } from 'sequelize';
 import Item from "../models/Item.js";
 import MensajeService from "./MensajeService.js";
 import NotificacionService from "./NotificacionService.js";
+import nodemailer from 'nodemailer';
 
 async function crearProyectoDesdeIdea(id_idea, datosProyecto, codigo_usuario) {
     const transaction = await db.transaction();
@@ -870,7 +871,8 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
             transaction
         });
         if (!proyecto) throw new Error("Proyecto no encontrado.");
-
+        console.log(proyecto.Idea);
+        
         // Buscar estado "CALIFICADO"
         const estadoCalificado = await Estado.findOne({
             where: { descripcion: "CALIFICADO" },
@@ -894,6 +896,8 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
             await proyecto.Idea.save({ transaction });
         }
 
+        console.log(proyecto);
+
         // Buscar equipo relacionado (opcional)
         const equipo = await Equipo.findOne({
             where: {
@@ -905,6 +909,7 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
             transaction
         });
         console.log(equipo);
+
         // Registrar en historial
         const historialProyecto = await HistorialProyecto.create({
             fecha: new Date(),
@@ -922,26 +927,85 @@ async function calificarProyecto(id_proyecto, observacion, codigo_usuario) {
         const mensaje = await MensajeService.crearMensaje(`Calificacion de proyecto: ${proyecto.Idea.titulo}`, `Se ha registrado la calificacion de su proyecto con la siguiente observación: ${historialProyecto.observacion}`);
         console.log("aquiiii" + equipo.id_equipo);
         //obtener integrantes del equipo 
+        // Obtener integrantes del equipo con sus datos de usuario (incluyendo correo)
         const integrantes = await IntegranteEquipo.findAll({
             where: { id_equipo: equipo.id_equipo },
-            attributes: { codigo_usuario }
+            include: [{
+                model: Usuario,
+                attributes: ['codigo', 'correo', 'nombre']
+            }],
+            transaction
         });
-        if (mensaje && mensaje.id_mensaje) {
+
+
+        if (mensaje && mensaje.id_mensaje && integrantes.length > 0) {
+            // Crear notificaciones y enviar correos
             await Promise.all(
-                integrantes.map(integrante =>
-                    NotificacionService.crearNotificacion(
-                        integrante.codigo_usuario, mensaje.id_mensaje
-                    )
-                )
+                integrantes.map(async (integrante) => {
+                    // Crear notificación en el sistema
+                    await NotificacionService.crearNotificacion(
+                        integrante.codigo_usuario,
+                        mensaje.id_mensaje
+                    );
+
+                    // Enviar correo electrónico
+                    if (integrante.Usuario && integrante.Usuario.correo) {
+                        await enviarCorreoCalificacion({
+                            destinatario: integrante.Usuario.correo,
+                            nombreDestinatario: integrante.Usuario.nombre,
+                            tituloProyecto: proyecto.Idea.titulo,
+                            observacion: historialProyecto.observacion
+                        });
+                    }
+                })
             );
         }
-
         await transaction.commit();
 
-        return { message: "Proyecto calificado exitosamente.", proyecto };
+       return { message: "Proyecto calificado exitosamente.", proyecto };
+      
     } catch (error) {
         await transaction.rollback();
         throw new Error("Error al calificar el proyecto: " + error.message);
+    }
+}
+
+// Función auxiliar para enviar correos
+async function enviarCorreoCalificacion({ destinatario, nombreDestinatario, tituloProyecto, observacion }) {
+    try {
+        // Aquí implementas tu lógica de envío de correos
+        // Ejemplo con nodemailer:
+        const transporter = nodemailer.createTransport({
+            // Tu configuración SMTP
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: true,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM,
+            to: destinatario,
+            subject: `Calificación de proyecto: ${tituloProyecto}`,
+            html: `
+                <h2>Hola ${nombreDestinatario},</h2>
+                <p>Se ha registrado la calificación de tu proyecto: <strong>${tituloProyecto}</strong></p>
+                <p><strong>Observación:</strong></p>
+                <p>${observacion}</p>
+                <br>
+                <p>Saludos,</p>
+                <p>Sistema de Gestión de Proyectos</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Correo enviado exitosamente a: ${destinatario}`);
+    } catch (error) {
+        console.error(`Error al enviar correo a ${destinatario}:`, error.message);
+        // No lanzamos el error para que no afecte la transacción principal
     }
 }
 
